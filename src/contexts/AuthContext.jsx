@@ -26,6 +26,11 @@ export function AuthProvider({ children }) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // Aggiorna displayName con il nome passato in additionalData
+        if (additionalData?.name) {
+            await updateProfile(user, { displayName: additionalData.name });
+        }
+
         // Salva dati aggiuntivi in Firestore
         await setDoc(doc(db, "users", user.uid), {
             email,

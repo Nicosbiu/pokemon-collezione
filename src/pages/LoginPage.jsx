@@ -22,7 +22,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
+        <div className="min-h-screen  flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
             <form onSubmit={handleSubmit} className="bg-violet-800 bg-opacity-70 rounded-xl shadow-lg p-8 w-full max-w-sm">
                 <h2 className="text-2xl font-bold mb-6 text-center">Accedi al tuo account</h2>
                 {error && <p className="text-red-400 mb-4">{error}</p>}
