@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
+        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
             <form onSubmit={handleSubmit} className="bg-violet-800 bg-opacity-70 rounded-xl shadow-lg p-8 w-full max-w-sm">
                 <h2 className="text-2xl font-bold mb-6 text-center">Accedi al tuo account</h2>
                 {error && <p className="text-red-400 mb-4">{error}</p>}
@@ -32,6 +33,12 @@ export default function LoginPage() {
                 <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-purple-400 py-3 rounded-md font-semibold hover:from-purple-700 hover:to-purple-500 transition">
                     Accedi
                 </button>
+                <p className="mt-4 text-center text-sm text-violet-300">
+                    Non hai un account?{' '}
+                    <Link to="/register" className="underline hover:text-purple-400">
+                        Registrati qui
+                    </Link>
+                </p>
             </form>
         </div>
     );

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { collection, doc, setDoc } from "firebase/firestore";
+import { db } from '../firebase';
 
 const AuthContext = createContext();
 
@@ -20,6 +22,20 @@ export function AuthProvider({ children }) {
         return signOut(auth);
     }
 
+    async function signup(email, password, additionalData) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Salva dati aggiuntivi in Firestore
+        await setDoc(doc(db, "users", user.uid), {
+            email,
+            ...additionalData,
+            createdAt: new Date()
+        });
+
+        return userCredential;
+    }
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, user => {
             setCurrentUser(user);
@@ -33,7 +49,8 @@ export function AuthProvider({ children }) {
     const value = {
         currentUser,
         login,
-        logout
+        logout,
+        signup
     };
 
     return (
