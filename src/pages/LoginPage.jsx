@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login } = useAuth();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         try {
             await login(email, password);
-            // redirect dopo login andrà gestito con React Router (step successivo)
+            navigate('/', { replace: true }); // Redirect a homepage
         } catch {
             setError('Credenziali non valide');
         }
