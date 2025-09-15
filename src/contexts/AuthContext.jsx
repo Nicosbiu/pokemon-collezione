@@ -23,23 +23,33 @@ export function AuthProvider({ children }) {
     }
 
     async function signup(email, password, additionalData) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        try {
+            console.log('AuthContext: Inizio signup');
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            console.log('AuthContext: Utente creato', user.uid);
 
-        // Aggiorna displayName con il nome passato in additionalData
-        if (additionalData?.nome) {
-            await updateProfile(user, { displayName: additionalData.nome });
+            // Aggiorna displayName
+            if (additionalData?.nome) {
+                await updateProfile(user, { displayName: additionalData.nome });
+                console.log('AuthContext: DisplayName aggiornato');
+            }
+
+            // Salva dati aggiuntivi in Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                email,
+                ...additionalData,
+                createdAt: new Date()
+            });
+            console.log('AuthContext: Dati salvati in Firestore');
+
+            return userCredential;
+        } catch (error) {
+            console.error('AuthContext: Errore in signup:', error);
+            throw error; // Importante: re-throw l'errore
         }
-
-        // Salva dati aggiuntivi in Firestore
-        await setDoc(doc(db, "users", user.uid), {
-            email,
-            ...additionalData,
-            createdAt: new Date()
-        });
-
-        return userCredential;
     }
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, user => {

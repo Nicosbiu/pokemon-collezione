@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
 import PasswordInput from '../components/PasswordInput.jsx';
 
 export default function RegisterPage() {
@@ -33,16 +34,47 @@ export default function RegisterPage() {
         }
         // Puoi aggiungere controlli extra tipo età minima
 
+        let loadingToast;
         try {
-            await signup(email, password, { nome, cognome, username, dataNascita, sesso });
-            navigate('/', { replace: true });
+            console.log('Inizio registrazione...');
+            loadingToast = toast.loading('Creazione account in corso...');
+
+            const result = await signup(email, password, { nome, cognome, username, dataNascita, sesso });
+            console.log('Registrazione completata:', result);
+
+            toast.dismiss(loadingToast);
+            toast.success(`Benvenuto ${nome}! La tua collezione ti aspetta!`, {
+                duration: 3000,
+                icon: '🎉',
+            });
+
+            console.log('Toast di successo mostrato, redirect in 1.5s...');
+            setTimeout(() => {
+                console.log('Eseguo redirect...');
+                navigate('/', { replace: true });
+            }, 1500);
+
         } catch (err) {
-            setError('Errore nella registrazione: ' + err.message);
+            console.error('Errore durante registrazione:', err);
+            if (loadingToast) {
+                toast.dismiss(loadingToast);
+            }
+            toast.error('Errore nella registrazione: ' + err.message);
         }
     };
 
     return (
         <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
+            <Toaster
+                position="top-center"
+                toastOptions={{
+                    style: {
+                        background: '#7c3aed',
+                        color: '#fff',
+                    },
+                }}
+            />
+
             <form onSubmit={handleSubmit} className="bg-violet-800 bg-opacity-70 rounded-xl shadow-lg p-8 w-full max-w-md mx-auto">
                 <h2 className="text-2xl font-bold mb-6 text-center text-white">Crea un nuovo account</h2>
                 {error && <p className="text-red-400 mb-4 text-center">{error}</p>}
