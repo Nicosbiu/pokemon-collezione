@@ -101,3 +101,10 @@ button:focus-visible {
 .password-toggle-btn:focus {
   outline: none;
 }
+
+/* Per nascondere icone di varie estensioni password manager */
+input[data-lastpass-icon-root],
+input[data-1p-ignore],
+input[data-nordpass-ignore] {
+  background-image: none !important;
+}
