@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'; // Aggiunto updateProfile
 import { collection, doc, setDoc } from "firebase/firestore";
 import { db } from '../firebase';
 
@@ -27,8 +27,8 @@ export function AuthProvider({ children }) {
         const user = userCredential.user;
 
         // Aggiorna displayName con il nome passato in additionalData
-        if (additionalData?.name) {
-            await updateProfile(user, { displayName: additionalData.name });
+        if (additionalData?.nome) {
+            await updateProfile(user, { displayName: additionalData.nome });
         }
 
         // Salva dati aggiuntivi in Firestore
