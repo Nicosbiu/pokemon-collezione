@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
             console.log('AuthContext: Inizio signup');
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+            console.log('User autenticato?', !!user);
             console.log('AuthContext: Utente creato', user.uid);
 
             // Aggiorna displayName
