@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../firebase';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'; // Aggiunto updateProfile
-import { collection, doc, setDoc } from "firebase/firestore";
-import { db } from '../firebase';
+// src/contexts/AuthContext.jsx
+import { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../services/firebase'; // ✅ Solo questo import Firebase
 
 const AuthContext = createContext();
 
@@ -14,64 +13,32 @@ export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    function login(email, password) {
-        return signInWithEmailAndPassword(auth, email, password);
-    }
-
-    function logout() {
-        return signOut(auth);
-    }
-
-    async function signup(email, password, additionalData) {
-        try {
-            console.log('AuthContext: Inizio signup');
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            console.log('User autenticato?', !!user);
-            console.log('AuthContext: Utente creato', user.uid);
-
-            // Aggiorna displayName
-            if (additionalData?.nome) {
-                await updateProfile(user, { displayName: additionalData.nome });
-                console.log('AuthContext: DisplayName aggiornato');
-            }
-
-            // Salva dati aggiuntivi in Firestore
-            await setDoc(doc(db, "users", user.uid), {
-                email,
-                ...additionalData,
-                createdAt: new Date()
-            });
-            console.log('AuthContext: Dati salvati in Firestore');
-
-            return userCredential;
-        } catch (error) {
-            console.error('AuthContext: Errore in signup:', error);
-            throw error; // Importante: re-throw l'errore
-        }
-    }
-
-
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, user => {
-            setCurrentUser(user);
-            setLoading(false);
-        });
+        console.log('🔥 AuthContext: Setting up onAuthStateChanged'); // Debug
 
-        // Cleanup subscription on unmount
+        const unsubscribe = onAuthStateChanged(auth,
+            (user) => {
+                console.log('🔥 AuthContext: Auth state changed', user?.email); // Debug
+                setCurrentUser(user);
+                setLoading(false);
+            },
+            (error) => {
+                console.error('🔥 AuthContext: Auth error', error); // Debug
+                setLoading(false);
+            }
+        );
+
         return unsubscribe;
     }, []);
 
     const value = {
         currentUser,
-        login,
-        logout,
-        signup
+        loading
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 }

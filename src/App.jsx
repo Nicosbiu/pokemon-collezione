@@ -1,36 +1,31 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import HomePage from './pages/HomePage';
-import RegisterPage from './pages/RegisterPage';
-import { useAuth } from './contexts/AuthContext';
+// src/App.jsx
+import { Routes, Route } from 'react-router-dom'; // ✅ NO BrowserRouter qui
+import { AuthProvider } from './contexts/AuthContext';
+import RequireAuth from './components/RequireAuth';
 import Navbar from './components/Navbar';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import CollectionsPage from './pages/CollectionsPage';
 
-// Componente per proteggere le rotte private, se non loggato reindirizza a /login
-function PrivateRoute({ children }) {
-  const { currentUser } = useAuth();
-  return currentUser ? children : <Navigate to="/login" replace />;
-}
-
-export default function App() {
-  const location = useLocation();
-
-  // Definisci le rotte dove NON vuoi mostrare la navbar
-  const noNavbarRoutes = ['/login', '/register'];
-
-  const showNavbar = !noNavbarRoutes.includes(location.pathname);
-
+function App() {
   return (
-    <>
-      {showNavbar && <Navbar />}
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/" element={
-          <PrivateRoute>
-            <HomePage />
-          </PrivateRoute>
-        } />
-      </Routes>
-    </>
+    <AuthProvider>
+      <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black">
+        <Navbar />
+        <Routes>  {/* ✅ Solo Routes, NO Router */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/collections" element={
+            <RequireAuth>
+              <CollectionsPage />
+            </RequireAuth>
+          } />
+        </Routes>
+      </div>
+    </AuthProvider>
   );
 }
+
+export default App;
