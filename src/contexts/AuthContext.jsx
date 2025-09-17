@@ -1,6 +1,12 @@
-// src/contexts/AuthContext.jsx
+// src/contexts/AuthContext.jsx - VERSIONE COMPLETA
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth'; // ✅ Importa signOut
+import {
+    onAuthStateChanged,
+    signOut,
+    signInWithEmailAndPassword,      // ✅ Per login
+    createUserWithEmailAndPassword,  // ✅ Per registro
+    updateProfile                    // ✅ Per aggiornare profilo
+} from 'firebase/auth';
 import { auth } from '../services/firebase';
 
 const AuthContext = createContext();
@@ -31,6 +37,40 @@ export function AuthProvider({ children }) {
         return unsubscribe;
     }, []);
 
+    // ✅ FUNZIONE LOGIN
+    const login = async (email, password) => {
+        try {
+            console.log('🔥 AuthContext: Attempting login for', email);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            console.log('✅ AuthContext: Login successful', userCredential.user.email);
+            return userCredential;
+        } catch (error) {
+            console.error('❌ AuthContext: Login error:', error);
+            throw error;
+        }
+    };
+
+    // ✅ FUNZIONE SIGNUP
+    const signup = async (email, password, displayName) => {
+        try {
+            console.log('🔥 AuthContext: Attempting signup for', email);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+            // Aggiorna il profilo con il nome se fornito
+            if (displayName) {
+                await updateProfile(userCredential.user, {
+                    displayName: displayName
+                });
+            }
+
+            console.log('✅ AuthContext: Signup successful', userCredential.user.email);
+            return userCredential;
+        } catch (error) {
+            console.error('❌ AuthContext: Signup error:', error);
+            throw error;
+        }
+    };
+
     // ✅ FUNZIONE LOGOUT
     const logout = async () => {
         try {
@@ -46,7 +86,9 @@ export function AuthProvider({ children }) {
     const value = {
         currentUser,
         loading,
-        logout // ✅ Includi logout nel context
+        login,    // ✅ Aggiungi login
+        signup,   // ✅ Aggiungi signup  
+        logout    // ✅ Aggiungi logout
     };
 
     return (

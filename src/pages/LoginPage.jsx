@@ -1,166 +1,150 @@
-// LoginPage.jsx - Versione glass moderna
+// src/pages/LoginPage.jsx - ESEMPIO CORRETTO
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
-export default function LoginPage() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+function LoginPage() {
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
 
-    const { login } = useAuth();
+    const { login } = useAuth(); // ✅ Usa login dal context
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setIsLoading(true);
+
+        if (!formData.email || !formData.password) {
+            toast.error('Please fill in all fields');
+            return;
+        }
 
         try {
-            const loadingToast = toast.loading('Accesso in corso...');
-            await login(email, password);
+            setIsLoading(true);
+            console.log('🔥 LoginPage: Submitting login form');
 
-            toast.dismiss(loadingToast);
-            toast.success('Benvenuto!', {
-                duration: 2000,
-                icon: '🎉',
-            });
+            await login(formData.email, formData.password);
 
-            navigate('/', { replace: true });
-        } catch (err) {
-            toast.error('Errore nel login: ' + err.message);
+            console.log('✅ LoginPage: Login successful, redirecting...');
+            toast.success('Login successful! Welcome back!');
+            navigate('/'); // Redirect to home
+
+        } catch (error) {
+            console.error('❌ LoginPage: Login failed:', error);
+
+            // ✅ Gestione errori Firebase specifici
+            let errorMessage = 'Login failed. Please try again.';
+
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    errorMessage = 'No account found with this email.';
+                    break;
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorMessage = 'Invalid email or password.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many failed attempts. Please try again later.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your connection.';
+                    break;
+                default:
+                    errorMessage = error.message || 'Login failed. Please try again.';
+            }
+
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
-            <Toaster
-                position="top-center"
-                toastOptions={{
-                    style: {
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: '#fff',
-                        borderRadius: '1rem',
-                    },
-                }}
-            />
+        <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-32 p-8">
+            <div className="max-w-md mx-auto">
+                <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                        rounded-2xl p-8">
 
-            {/* Card container con effetto glass */}
-            <div className="w-full max-w-md">
-                <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] rounded-3xl p-8 shadow-2xl shadow-black/20">
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+                        <p className="text-white/70">Sign in to your account</p>
+                    </div>
 
-                    {/* Gradient overlay sottile */}
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"></div>
-
-                    <div className="relative z-10">
-                        {/* Header */}
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-white/15 flex items-center justify-center">
-                                <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">P</span>
-                            </div>
-                            <h2 className="text-2xl font-light text-white/90 mb-2">Bentornato</h2>
-                            <p className="text-sm text-white/60">Accedi alla tua collezione Pokémon</p>
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label className="block text-white/70 text-sm mb-2">Email</label>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                disabled={isLoading}
+                                className="w-full backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                           rounded-lg px-4 py-3 text-white placeholder-white/50 
+                           focus:outline-none focus:border-white/30 transition-all
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder="your@email.com"
+                                required
+                            />
                         </div>
 
-                        {error && (
-                            <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-sm">
-                                <p className="text-red-300 text-sm text-center">{error}</p>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-
-                            {/* Email Field */}
-                            <div>
-                                <label htmlFor="email" className="block text-white/80 mb-2 text-sm font-medium">
-                                    Email
-                                </label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    placeholder="La tua email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                    required
-                                />
-                            </div>
-
-                            {/* Password Field con occhietto */}
-                            <div>
-                                <label htmlFor="password" className="block text-white/80 mb-2 text-sm font-medium">
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        id="password"
-                                        placeholder="La tua password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full p-4 pr-12 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                        required
-                                    />
-
-                                    {/* Pulsante occhietto */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors duration-200 p-1"
-                                    >
-                                        {showPassword ? (
-                                            <EyeSlashIcon className="w-5 h-5" />
-                                        ) : (
-                                            <EyeIcon className="w-5 h-5" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
+                        <div>
+                            <label className="block text-white/70 text-sm mb-2">Password</label>
+                            <input
+                                type="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 disabled={isLoading}
-                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500/30 to-pink-500/30 hover:from-purple-500/40 hover:to-pink-500/40 border border-white/20 hover:border-white/30 text-white font-medium transition-all duration-300 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
-                            >
-                                {isLoading ? (
-                                    <div className="flex items-center justify-center space-x-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        <span>Accesso...</span>
-                                    </div>
-                                ) : (
-                                    'Accedi'
-                                )}
-                            </button>
+                                className="w-full backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                           rounded-lg px-4 py-3 text-white placeholder-white/50 
+                           focus:outline-none focus:border-white/30 transition-all
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder="Your password"
+                                required
+                            />
+                        </div>
 
-                            {/* Link registrazione */}
-                            <div className="text-center pt-4 border-t border-white/10">
-                                <p className="text-sm text-white/60">
-                                    Non hai un account?{' '}
-                                    <Link
-                                        to="/register"
-                                        className="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-200"
-                                    >
-                                        Registrati qui
-                                    </Link>
-                                </p>
-                            </div>
-                        </form>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 
+                         border border-purple-400/30 text-white rounded-lg py-3 px-4 
+                         hover:from-purple-500/40 hover:to-pink-500/40 
+                         hover:border-purple-400/50 transition-all duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         flex items-center justify-center gap-2 font-medium"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                    Signing In...
+                                </>
+                            ) : (
+                                'Sign In'
+                            )}
+                        </button>
+                    </form>
 
-                        {/* Floating elements per depth */}
-                        <div className="absolute top-8 right-8 w-12 h-12 bg-gradient-to-br from-purple-400/8 to-transparent rounded-full blur-lg opacity-50"></div>
-                        <div className="absolute bottom-8 left-8 w-8 h-8 bg-gradient-to-br from-pink-400/5 to-transparent rounded-full blur-md opacity-30"></div>
+                    {/* Footer */}
+                    <div className="text-center mt-6 pt-6 border-t border-white/10">
+                        <p className="text-white/70">
+                            Don't have an account?{' '}
+                            <Link to="/register" className="text-purple-300 hover:text-purple-200 font-medium">
+                                Sign up here
+                            </Link>
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
+export default LoginPage;

@@ -1,5 +1,6 @@
 // src/components/DashboardHome.jsx - Salva le tue card esistenti
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import StatCard from './StatCard';
 import { collectionsService } from '../services/firebase';
