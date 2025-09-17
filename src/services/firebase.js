@@ -1,7 +1,18 @@
 // src/services/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    doc,
+    getDocs,
+    query,
+    where,
+    updateDoc,
+    deleteDoc,
+    serverTimestamp
+} from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA8gVCBuREFQHQxruTBiAvMNSO8a6hH84Q",
@@ -19,4 +30,90 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// ✅ NON importare altri file del progetto qui
+// ✅ FUNZIONI PER GESTIRE LE COLLEZIONI
+export const collectionsService = {
+
+    // Crea una nuova collezione
+    async createCollection(collectionData, userId) {
+        try {
+            // ✅ Crea documento in /collections
+            const docRef = await addDoc(collection(db, 'collections'), {
+                name: collectionData.name,
+                description: collectionData.description || '',
+                gameId: collectionData.gameId,
+                ownerId: userId,
+                members: {
+                    [userId]: {
+                        role: 'owner',
+                        canEdit: true,
+                        joinedAt: serverTimestamp()
+                    }
+                },
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            console.log('✅ Collection created with ID:', docRef.id);
+            return docRef.id;
+        } catch (error) {
+            console.error('❌ Error creating collection:', error);
+            throw error;
+        }
+    },
+
+    // ✅ AGGIORNA una collezione esistente
+    async updateCollection(collectionId, updateData) {
+        try {
+            const docRef = doc(db, 'collections', collectionId);
+            await updateDoc(docRef, {
+                ...updateData,
+                updatedAt: serverTimestamp()
+            });
+
+            console.log('✅ Collection updated:', collectionId);
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating collection:', error);
+            throw error;
+        }
+    },
+
+    // ✅ ELIMINA una collezione
+    async deleteCollection(collectionId) {
+        try {
+            await deleteDoc(doc(db, 'collections', collectionId));
+            console.log('✅ Collection deleted:', collectionId);
+            return true;
+        } catch (error) {
+            console.error('❌ Error deleting collection:', error);
+            throw error;
+        }
+    },
+
+    // Ottieni collezioni dell'utente
+    async getUserCollections(userId) {
+        try {
+            // ✅ Query per collezioni dove l'utente è membro
+            const q = query(
+                collection(db, 'collections'),
+                where(`members.${userId}`, '!=', null)
+            );
+
+            const querySnapshot = await getDocs(q);
+            const collections = [];
+
+            querySnapshot.forEach((doc) => {
+                collections.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            return collections;
+        } catch (error) {
+            console.error('❌ Error fetching collections:', error);
+            throw error;
+        }
+    }
+};
+

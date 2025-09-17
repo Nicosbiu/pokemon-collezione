@@ -1,27 +1,28 @@
-// src/components/CreateCollectionModal.jsx
+// src/components/EditCollectionModal.jsx
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
-function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false }) {
-    const initialFormState = {
+function EditCollectionModal({ isOpen, onClose, onSubmit, collection, isLoading = false }) {
+    const [formData, setFormData] = useState({
         name: '',
         description: '',
         gameId: 'pokemon'
-    };
+    });
 
-    const [formData, setFormData] = useState(initialFormState);
-
-    // ✅ RESET FORM quando il modal si chiude
+    // ✅ Popola il form con i dati della collezione esistente
     useEffect(() => {
-        if (!isOpen) {
-            setFormData(initialFormState);
+        if (collection && isOpen) {
+            setFormData({
+                name: collection.name || '',
+                description: collection.description || '',
+                gameId: collection.gameId || 'pokemon'
+            });
         }
-    }, [isOpen]);
+    }, [collection, isOpen]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSubmit(formData);
-        // ❌ NON resettare qui, sarà fatto automaticamente quando il modal si chiude
+        onSubmit(collection.id, formData);
     };
 
     if (!isOpen) return null;
@@ -32,7 +33,7 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                       rounded-2xl p-8 w-full max-w-md">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-white text-xl font-semibold">Create New Collection</h2>
+                    <h2 className="text-white text-xl font-semibold">Edit Collection</h2>
                     <button
                         onClick={onClose}
                         disabled={isLoading}
@@ -116,20 +117,20 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                         <button
                             type="submit"
                             disabled={isLoading || !formData.name.trim()}
-                            className="flex-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 
-                         border border-purple-400/30 text-white rounded-lg py-3 px-4 
-                         hover:from-purple-500/40 hover:to-pink-500/40 
-                         hover:border-purple-400/50 transition-all duration-200
+                            className="flex-1 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 
+                         border border-blue-400/30 text-white rounded-lg py-3 px-4 
+                         hover:from-blue-500/40 hover:to-cyan-500/40 
+                         hover:border-blue-400/50 transition-all duration-200
                          disabled:opacity-50 disabled:cursor-not-allowed
                          flex items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                    Creating...
+                                    Updating...
                                 </>
                             ) : (
-                                'Create Collection'
+                                'Update Collection'
                             )}
                         </button>
                     </div>
@@ -139,4 +140,4 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     );
 }
 
-export default CreateCollectionModal;
+export default EditCollectionModal;
