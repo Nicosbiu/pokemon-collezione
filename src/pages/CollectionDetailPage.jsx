@@ -242,10 +242,10 @@ function CollectionDetailPage() {
                 </div>
 
                 {/* ✅ TEMPORARY API TESTER - RIMUOVERE IN PRODUZIONE */}
-                {process.env.NODE_ENV === 'development' && (
+                {/* {process.env.NODE_ENV === 'development' && (
                     <APITester />
-                )}
-
+                )}*/}
+                
                 {/* ✅ MODAL EDIT COLLEZIONE */}
                 <EditCollectionModal
                     isOpen={isEditModalOpen}
