@@ -25,13 +25,13 @@ export default function Navbar() {
         }
     };
 
-    // ✅ AGGIORNATO: Collections invece di Pokédex
-    const navItems = [
+    // ✅ NAVIGAZIONE CONDIZIONALE
+    const navItems = currentUser ? [
         { path: '/', label: 'Home', icon: <HomeIcon className="w-5 h-5" /> },
-        { path: '/collections', label: 'Collections', icon: <FolderIcon className="w-5 h-5" /> }, // ✅ CAMBIATO
+        { path: '/collections', label: 'Collections', icon: <FolderIcon className="w-5 h-5" /> },
         { path: '/add-card', label: 'Aggiungi', icon: <PlusIcon className="w-5 h-5" /> },
         { path: '/stats', label: 'Stats', icon: <ChartBarIcon className="w-5 h-5" /> },
-    ];
+    ] : []; // ✅ Array vuoto se non loggato
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
@@ -59,8 +59,8 @@ export default function Navbar() {
                                     key={item.path}
                                     to={item.path}
                                     className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-300 ${location.pathname === item.path
-                                            ? 'bg-white/15 text-white border border-white/20 shadow-lg shadow-purple-500/10'
-                                            : 'text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10'
+                                        ? 'bg-white/15 text-white border border-white/20 shadow-lg shadow-purple-500/10'
+                                        : 'text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10'
                                         }`}
                                 >
                                     {item.icon}
@@ -132,8 +132,8 @@ export default function Navbar() {
                                         to={item.path}
                                         onClick={() => setIsMobileMenuOpen(false)}
                                         className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${location.pathname === item.path
-                                                ? 'bg-white/15 text-white border border-white/20'
-                                                : 'text-white/70 hover:text-white hover:bg-white/10'
+                                            ? 'bg-white/15 text-white border border-white/20'
+                                            : 'text-white/70 hover:text-white hover:bg-white/10'
                                             }`}
                                     >
                                         {item.icon}
