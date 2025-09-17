@@ -87,7 +87,7 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white p-6">
+        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white pt-32 p-8">
             <Toaster
                 position="top-center"
                 toastOptions={{

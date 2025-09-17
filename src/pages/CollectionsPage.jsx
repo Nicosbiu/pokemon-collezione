@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { collectionsService } from '../services/firebase';
-import CreateCollectionModal from '../components/CreateCollectionModal';
-import EditCollectionModal from '../components/EditCollectionModal';
-import DeleteCollectionModal from '../components/DeleteCollectionModal';
+import CreateCollectionModal from '../components/modals/CreateCollectionModal';
+import EditCollectionModal from '../components/modals/EditCollectionModal';
+import DeleteCollectionModal from '../components/modals/DeleteCollectionModal';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 

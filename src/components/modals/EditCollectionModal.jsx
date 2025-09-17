@@ -1,7 +1,7 @@
 // src/components/EditCollectionModal.jsx
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { pokemonAPI } from '../services/pokemonAPI';
+import { pokemonAPI } from '../../services/pokemonAPI';
 
 function EditCollectionModal({ isOpen, onClose, onSubmit, collection, isLoading = false }) {
     const [formData, setFormData] = useState({

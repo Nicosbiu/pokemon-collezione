@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import StatCard from './StatCard';
+import StatCard from '../components/StatCard';
 import { collectionsService } from '../services/firebase';
 
 function DashboardHome() {

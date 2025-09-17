@@ -1,7 +1,7 @@
 // src/pages/HomePage.jsx - Versione Condizionale
 import { useAuth } from '../contexts/AuthContext';
-import LandingPage from '../components/LandingPage';
-import DashboardHome from '../components/DashboardHome';
+import LandingPage from '../pages/LandingPage';
+import DashboardHome from '../pages/DashboardHome';
 
 function HomePage() {
     const { currentUser, loading } = useAuth();

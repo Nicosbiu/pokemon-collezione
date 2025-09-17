@@ -1,7 +1,7 @@
 // src/components/CreateCollectionModal.jsx
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { pokemonAPI } from '../services/pokemonAPI';
+import { pokemonAPI } from '../../services/pokemonAPI';
 
 function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false }) {
     const initialFormState = {
