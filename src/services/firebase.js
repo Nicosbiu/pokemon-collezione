@@ -1,6 +1,6 @@
 // src/services/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
 import {
     getFirestore,
     collection,
@@ -29,6 +29,7 @@ const app = initializeApp(firebaseConfig);
 // ✅ Esporta le istanze, non le funzioni
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export { signOut };
 
 // ✅ FUNZIONI PER GESTIRE LE COLLEZIONI
 export const collectionsService = {
