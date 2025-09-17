@@ -7,6 +7,8 @@ import EditCollectionModal from '../components/modals/EditCollectionModal';
 import { collectionsService } from '../services/firebase';
 import toast from 'react-hot-toast';
 
+import APITester from '../components/APITester'; // ✅ Import temporaneo
+
 function CollectionDetailPage() {
     const {
         collection,
@@ -115,8 +117,8 @@ function CollectionDetailPage() {
                         <button
                             onClick={() => setActiveTab('cards')}
                             className={`px-6 py-4 text-sm font-medium transition-all duration-200 ${activeTab === 'cards'
-                                    ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
-                                    : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
+                                ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
+                                : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
                                 }`}
                         >
                             Cards (0)
@@ -125,8 +127,8 @@ function CollectionDetailPage() {
                         <button
                             onClick={() => setActiveTab('sets')}
                             className={`px-6 py-4 text-sm font-medium transition-all duration-200 ${activeTab === 'sets'
-                                    ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
-                                    : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
+                                ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
+                                : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
                                 }`}
                         >
                             Sets (0)
@@ -135,8 +137,8 @@ function CollectionDetailPage() {
                         <button
                             onClick={() => setActiveTab('statistics')}
                             className={`px-6 py-4 text-sm font-medium transition-all duration-200 ${activeTab === 'statistics'
-                                    ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
-                                    : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
+                                ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
+                                : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
                                 }`}
                         >
                             Statistics
@@ -146,8 +148,8 @@ function CollectionDetailPage() {
                             <button
                                 onClick={() => setActiveTab('settings')}
                                 className={`px-6 py-4 text-sm font-medium transition-all duration-200 ${activeTab === 'settings'
-                                        ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
-                                        : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
+                                    ? 'text-white border-b-2 border-purple-400 bg-white/[0.05]'
+                                    : 'text-white/70 hover:text-white hover:bg-white/[0.02]'
                                     }`}
                             >
                                 Settings
@@ -238,6 +240,11 @@ function CollectionDetailPage() {
                         )}
                     </div>
                 </div>
+
+                {/* ✅ TEMPORARY API TESTER - RIMUOVERE IN PRODUZIONE */}
+                {process.env.NODE_ENV === 'development' && (
+                    <APITester />
+                )}
 
                 {/* ✅ MODAL EDIT COLLEZIONE */}
                 <EditCollectionModal
