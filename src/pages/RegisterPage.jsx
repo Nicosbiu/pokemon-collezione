@@ -1,312 +1,546 @@
-// RegisterPage.jsx - Versione glass moderna
+// src/pages/RegisterPage.jsx - VERSIONE COMPLETA CON TUTTI I CAMPI
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
-export default function RegisterPage() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [nome, setNome] = useState('');
-    const [cognome, setCognome] = useState('');
-    const [username, setUsername] = useState('');
-    const [dataNascita, setDataNascita] = useState('');
-    const [sesso, setSesso] = useState('');
+function RegisterPage() {
+    const [formData, setFormData] = useState({
+        nome: '',
+        cognome: '',
+        username: '',
+        email: '',
+        password: '',
+        confermaPassword: '',
+        sesso: '',
+        dataNascita: ''
+    });
+
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [passwordMatch, setPasswordMatch] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState('');
 
     const { signup } = useAuth();
     const navigate = useNavigate();
 
-    const checkPasswordMatch = (pwd, confirmPwd) => {
-        const match = pwd === confirmPwd;
-        setPasswordMatch(match);
-        return match;
+    // ✅ VALIDAZIONE COMPLETA PER TUTTI I CAMPI
+    const validateForm = () => {
+        const newErrors = {};
+
+        // Nome - Obbligatorio, minimo 2 caratteri
+        if (!formData.nome.trim()) {
+            newErrors.nome = 'Il nome è obbligatorio';
+        } else if (formData.nome.trim().length < 2) {
+            newErrors.nome = 'Il nome deve avere almeno 2 caratteri';
+        }
+
+        // Cognome - Obbligatorio, minimo 2 caratteri
+        if (!formData.cognome.trim()) {
+            newErrors.cognome = 'Il cognome è obbligatorio';
+        } else if (formData.cognome.trim().length < 2) {
+            newErrors.cognome = 'Il cognome deve avere almeno 2 caratteri';
+        }
+
+        // Username - Obbligatorio, minimo 3 caratteri, solo lettere/numeri/_
+        if (!formData.username.trim()) {
+            newErrors.username = 'L\'username è obbligatorio';
+        } else if (formData.username.trim().length < 3) {
+            newErrors.username = 'L\'username deve avere almeno 3 caratteri';
+        } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username.trim())) {
+            newErrors.username = 'L\'username può contenere solo lettere, numeri e underscore';
+        }
+
+        // Email - Obbligatoria, formato valido
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!formData.email.trim()) {
+            newErrors.email = 'L\'email è obbligatoria';
+        } else if (!emailRegex.test(formData.email.trim())) {
+            newErrors.email = 'Inserisci un indirizzo email valido';
+        }
+
+        // Password - Obbligatoria, minimo 6 caratteri
+        if (!formData.password) {
+            newErrors.password = 'La password è obbligatoria';
+        } else if (formData.password.length < 6) {
+            newErrors.password = 'La password deve avere almeno 6 caratteri';
+        }
+
+        // Conferma Password - Obbligatoria, deve corrispondere
+        if (!formData.confermaPassword) {
+            newErrors.confermaPassword = 'Conferma la tua password';
+        } else if (formData.password !== formData.confermaPassword) {
+            newErrors.confermaPassword = 'Le password non corrispondono';
+        }
+
+        // Sesso - Obbligatorio
+        if (!formData.sesso) {
+            newErrors.sesso = 'Seleziona il tuo sesso';
+        }
+
+        // Data di Nascita - Obbligatoria, validazione età
+        if (!formData.dataNascita) {
+            newErrors.dataNascita = 'La data di nascita è obbligatoria';
+        } else {
+            const birthDate = new Date(formData.dataNascita);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+
+            if (age < 13) {
+                newErrors.dataNascita = 'Devi avere almeno 13 anni per registrarti';
+            } else if (age > 120) {
+                newErrors.dataNascita = 'Inserisci una data di nascita valida';
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
-    const handlePasswordChange = (e) => {
-        const value = e.target.value;
-        setPassword(value);
-        checkPasswordMatch(value, confirmPassword);
+    // ✅ MESSAGGI ERRORE FIREBASE IN ITALIANO
+    const getFirebaseErrorMessage = (errorCode) => {
+        const errorMessages = {
+            'auth/email-already-in-use': 'Questa email è già registrata. Prova ad accedere invece.',
+            'auth/invalid-email': 'Inserisci un indirizzo email valido.',
+            'auth/operation-not-allowed': 'Registrazione non consentita. Contatta il supporto.',
+            'auth/weak-password': 'La password è troppo debole. Scegline una più forte.',
+            'auth/too-many-requests': 'Troppi tentativi. Riprova più tardi.',
+            'auth/network-request-failed': 'Errore di connessione. Controlla la tua connessione internet.',
+            'auth/invalid-credential': 'Credenziali non valide. Controlla i tuoi dati.',
+            'auth/user-disabled': 'Questo account è stato disabilitato. Contatta il supporto.',
+            'auth/quota-exceeded': 'Servizio temporaneamente non disponibile. Riprova più tardi.',
+            'auth/timeout': 'Richiesta scaduta. Riprova.',
+            'auth/invalid-value-(display-name),-starting-an-object-on-a-scalar-field': 'Formato nome non valido. Inserisci un nome valido.',
+            'auth/invalid-display-name': 'Nome non valido. Inserisci un nome valido.'
+        };
+
+        return errorMessages[errorCode] || 'Errore durante la registrazione. Riprova.';
     };
 
-    const handleConfirmPasswordChange = (e) => {
-        const value = e.target.value;
-        setConfirmPassword(value);
-        checkPasswordMatch(password, value);
+    // ✅ GESTIONE CAMBIAMENTO INPUT
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+
+        // Rimuovi errore quando l'utente inizia a correggere
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: '' }));
+        }
     };
 
+    // ✅ SUBMIT CON TUTTI I DATI
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
 
-        if (!passwordMatch) {
-            setError('Le password non coincidono');
+        // Validazione pre-submit
+        if (!validateForm()) {
+            toast.error('Correggi gli errori evidenziati');
             return;
         }
 
-        if (!dataNascita) {
-            setError('Per favore inserisci la data di nascita');
-            return;
-        }
-
-        const today = new Date();
-        const dob = new Date(dataNascita);
-        if (dob > today) {
-            setError('La data di nascita non può essere nel futuro');
-            return;
-        }
-
-        setIsSubmitting(true);
+        let userCreated = false;
+        let currentUser = null;
 
         try {
-            const loadingToast = toast.loading('Creazione account in corso...');
+            setIsLoading(true);
+            console.log('🔥 RegisterPage: Inizio registrazione');
 
-            await signup(email, password, { nome, cognome, username, dataNascita, sesso });
+            // Pulizia dati form
+            const cleanFormData = {
+                nome: formData.nome.trim(),
+                cognome: formData.cognome.trim(),
+                username: formData.username.trim().toLowerCase(),
+                email: formData.email.trim().toLowerCase(),
+                password: formData.password,
+                sesso: formData.sesso,
+                dataNascita: formData.dataNascita
+            };
 
-            toast.dismiss(loadingToast);
-            toast.success(`Benvenuto ${nome}! La tua collezione ti aspetta!`, {
-                duration: 3000,
-                icon: '🎉',
+            // Nome completo per Firebase displayName
+            const displayName = `${cleanFormData.nome} ${cleanFormData.cognome}`;
+
+            console.log('📝 RegisterPage: Dati puliti:', {
+                nome: cleanFormData.nome,
+                cognome: cleanFormData.cognome,
+                username: cleanFormData.username,
+                email: cleanFormData.email,
+                sesso: cleanFormData.sesso,
+                dataNascita: cleanFormData.dataNascita,
+                displayName: displayName
             });
 
+            // ✅ TENTATIVO REGISTRAZIONE CON TUTTI I DATI
+            const userCredential = await signup(
+                cleanFormData.email,
+                cleanFormData.password,
+                displayName,
+                cleanFormData // ✅ Passa tutti i dati aggiuntivi
+            );
+
+            userCreated = true;
+            currentUser = userCredential.user;
+
+            console.log('✅ RegisterPage: Registrazione completata', {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName
+            });
+
+            // ✅ SUCCESSO - Pulisci form e reindirizza
+            setFormData({
+                nome: '',
+                cognome: '',
+                username: '',
+                email: '',
+                password: '',
+                confermaPassword: '',
+                sesso: '',
+                dataNascita: ''
+            });
+
+            toast.success(`Benvenuto ${displayName}! Il tuo account è stato creato con successo.`);
+
+            // Reindirizza dopo un breve delay per mostrare il toast
             setTimeout(() => {
                 navigate('/', { replace: true });
             }, 1500);
 
-        } catch (err) {
-            toast.error('Errore nella registrazione: ' + err.message);
+        } catch (error) {
+            console.error('❌ RegisterPage: Registrazione fallita:', {
+                code: error.code,
+                message: error.message,
+                userCreated: userCreated
+            });
+
+            // ✅ GESTIONE ERRORE CON MESSAGGIO UTENTE
+            const userErrorMessage = getFirebaseErrorMessage(error.code);
+
+            // Se l'account è stato creato ma c'è stato un errore successivo
+            if (userCreated && currentUser) {
+                console.log('⚠️ RegisterPage: Account creato ma errore successivo');
+                toast.success('Account creato con successo! Puoi ora accedere.');
+
+                // Reindirizza al login dopo delay
+                setTimeout(() => {
+                    navigate('/login', { replace: true });
+                }, 2000);
+            } else {
+                toast.error(userErrorMessage);
+            }
+
+            // Imposta errori specifici per i campi se necessario
+            if (error.code === 'auth/email-already-in-use') {
+                setErrors({ email: 'Questa email è già registrata' });
+            } else if (error.code === 'auth/weak-password') {
+                setErrors({ password: 'Password troppo debole' });
+            } else if (error.code === 'auth/invalid-email') {
+                setErrors({ email: 'Formato email non valido' });
+            }
+
         } finally {
-            setIsSubmitting(false);
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-violet-900 to-black text-white pt-32 p-8">
-            <Toaster
-                position="top-center"
-                toastOptions={{
-                    style: {
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: '#fff',
-                        borderRadius: '1rem',
-                    },
-                }}
-            />
+        <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black 
+                    pt-36 p-8">
+            <div className="max-w-2xl mx-auto"> {/* ✅ Più largo per 2 colonne */}
+                <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                        rounded-2xl p-8">
 
-            {/* Card container glass - più largo per i campi */}
-            <div className="w-full max-w-2xl">
-                <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] rounded-3xl p-8 shadow-2xl shadow-black/20">
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-white mb-2">Crea Account</h1>
+                        <p className="text-white/70">Unisciti alla community Pokémon Collection</p>
+                    </div>
 
-                    {/* Gradient overlay sottile */}
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"></div>
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
 
-                    <div className="relative z-10">
-                        {/* Header */}
-                        <div className="text-center mb-8">
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-white/15 flex items-center justify-center">
-                                <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">P</span>
+                        {/* ✅ RIGA 1: NOME E COGNOME */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Nome *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.nome}
+                                    onChange={(e) => handleInputChange('nome', e.target.value)}
+                                    disabled={isLoading}
+                                    className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 
+                             text-white placeholder-white/50 focus:outline-none transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             ${errors.nome
+                                            ? 'border-red-400/50 focus:border-red-400/70'
+                                            : 'border-white/[0.12] focus:border-white/30'
+                                        }`}
+                                    placeholder="Il tuo nome"
+                                    required
+                                />
+                                {errors.nome && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.nome}</p>
+                                )}
                             </div>
-                            <h2 className="text-2xl font-light text-white/90 mb-2">Crea il tuo account</h2>
-                            <p className="text-sm text-white/60">Inizia la tua collezione Pokémon</p>
+
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Cognome *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.cognome}
+                                    onChange={(e) => handleInputChange('cognome', e.target.value)}
+                                    disabled={isLoading}
+                                    className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 
+                             text-white placeholder-white/50 focus:outline-none transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             ${errors.cognome
+                                            ? 'border-red-400/50 focus:border-red-400/70'
+                                            : 'border-white/[0.12] focus:border-white/30'
+                                        }`}
+                                    placeholder="Il tuo cognome"
+                                    required
+                                />
+                                {errors.cognome && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.cognome}</p>
+                                )}
+                            </div>
                         </div>
 
-                        {error && (
-                            <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-sm">
-                                <p className="text-red-300 text-sm text-center">{error}</p>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-
-                            {/* Riga 1: Nome e Cognome */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="nome" className="block text-white/80 mb-2 text-sm font-medium">Nome</label>
-                                    <input
-                                        type="text"
-                                        id="nome"
-                                        placeholder="Nome"
-                                        value={nome}
-                                        onChange={e => setNome(e.target.value)}
-                                        className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label htmlFor="cognome" className="block text-white/80 mb-2 text-sm font-medium">Cognome</label>
-                                    <input
-                                        type="text"
-                                        id="cognome"
-                                        placeholder="Cognome"
-                                        value={cognome}
-                                        onChange={e => setCognome(e.target.value)}
-                                        className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Riga 2: Username e Email */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="username" className="block text-white/80 mb-2 text-sm font-medium">Username</label>
-                                    <input
-                                        type="text"
-                                        id="username"
-                                        placeholder="Username"
-                                        value={username}
-                                        onChange={e => setUsername(e.target.value)}
-                                        className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label htmlFor="email" className="block text-white/80 mb-2 text-sm font-medium">Email</label>
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        placeholder="Email"
-                                        value={email}
-                                        onChange={e => setEmail(e.target.value)}
-                                        className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Riga 3: Password e Conferma Password */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="password" className="block text-white/80 mb-2 text-sm font-medium">Password</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            id="password"
-                                            placeholder="Password"
-                                            value={password}
-                                            onChange={handlePasswordChange}
-                                            className="w-full p-4 pr-12 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors duration-200 p-1"
-                                        >
-                                            {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label htmlFor="confirmPassword" className="block text-white/80 mb-2 text-sm font-medium">Conferma Password</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showConfirmPassword ? 'text' : 'password'}
-                                            id="confirmPassword"
-                                            placeholder="Ripeti la password"
-                                            value={confirmPassword}
-                                            onChange={handleConfirmPasswordChange}
-                                            className={`w-full p-4 pr-12 rounded-2xl bg-white/5 backdrop-blur-sm border placeholder-white/40 text-white focus:outline-none focus:ring-2 transition-all duration-200 ${passwordMatch ? 'border-white/10 focus:ring-purple-500/50 focus:border-white/20' : 'border-red-500/40 focus:ring-red-500/50'
-                                                }`}
-                                            required
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors duration-200 p-1"
-                                        >
-                                            {showConfirmPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
-                                        </button>
-                                    </div>
-
-                                    {confirmPassword && (
-                                        <div className={`text-sm mt-2 ${passwordMatch ? 'text-green-400' : 'text-red-400'}`}>
-                                            {passwordMatch ? '✅ Le password coincidono' : '❌ Le password non coincidono'}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Riga 4: Data di nascita e Sesso */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="dataNascita" className="block text-white/80 mb-2 text-sm font-medium">Data di nascita</label>
-                                    <input
-                                        type="date"
-                                        id="dataNascita"
-                                        value={dataNascita}
-                                        onChange={e => setDataNascita(e.target.value)}
-                                        max={new Date().toISOString().split("T")[0]}
-                                        className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label htmlFor="sesso" className="block text-white/80 mb-2 text-sm font-medium">Sesso</label>
-                                    <select
-                                        id="sesso"
-                                        value={sesso}
-                                        onChange={e => setSesso(e.target.value)}
-                                        className="w-full p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-white/20 transition-all duration-200 [&>option]:bg-violet-900 [&>option]:text-white [&>option]:py-2"
-                                        required
-                                    >
-                                        <option value="" className="bg-violet-900 text-white/60">Seleziona</option>
-                                        <option value="Maschio" className="bg-violet-900 text-white">Maschio</option>
-                                        <option value="Femmina" className="bg-violet-900 text-white">Femmina</option>
-                                        <option value="Altro" className="bg-violet-900 text-white">Altro</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                disabled={isSubmitting || !passwordMatch}
-                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-500/30 to-pink-500/30 hover:from-purple-500/40 hover:to-pink-500/40 border border-white/20 hover:border-white/30 text-white font-medium transition-all duration-300 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
-                            >
-                                {isSubmitting ? (
-                                    <div className="flex items-center justify-center space-x-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        <span>Creazione account...</span>
-                                    </div>
-                                ) : (
-                                    'Registrati'
+                        {/* ✅ RIGA 2: USERNAME E EMAIL */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Username *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.username}
+                                    onChange={(e) => handleInputChange('username', e.target.value)}
+                                    disabled={isLoading}
+                                    className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 
+                             text-white placeholder-white/50 focus:outline-none transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             ${errors.username
+                                            ? 'border-red-400/50 focus:border-red-400/70'
+                                            : 'border-white/[0.12] focus:border-white/30'
+                                        }`}
+                                    placeholder="username_univoco"
+                                    required
+                                />
+                                {errors.username && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.username}</p>
                                 )}
-                            </button>
-
-                            {/* Link login */}
-                            <div className="text-center pt-4 border-t border-white/10">
-                                <p className="text-sm text-white/60">
-                                    Hai già un account?{' '}
-                                    <Link
-                                        to="/login"
-                                        className="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-200"
-                                    >
-                                        Accedi qui
-                                    </Link>
-                                </p>
                             </div>
-                        </form>
 
-                        {/* Floating elements per depth */}
-                        <div className="absolute top-8 right-8 w-16 h-16 bg-gradient-to-br from-purple-400/6 to-transparent rounded-full blur-xl opacity-40"></div>
-                        <div className="absolute bottom-8 left-8 w-12 h-12 bg-gradient-to-br from-pink-400/4 to-transparent rounded-full blur-lg opacity-30"></div>
-                        <div className="absolute top-1/3 left-12 w-8 h-8 bg-gradient-to-br from-violet-400/5 to-transparent rounded-full blur-md opacity-20"></div>
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Email *
+                                </label>
+                                <input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => handleInputChange('email', e.target.value)}
+                                    disabled={isLoading}
+                                    className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 
+                             text-white placeholder-white/50 focus:outline-none transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             ${errors.email
+                                            ? 'border-red-400/50 focus:border-red-400/70'
+                                            : 'border-white/[0.12] focus:border-white/30'
+                                        }`}
+                                    placeholder="tua@email.com"
+                                    required
+                                    autoComplete="email"
+                                />
+                                {errors.email && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.email}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ✅ RIGA 3: PASSWORD E CONFERMA PASSWORD */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Password *
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={formData.password}
+                                        onChange={(e) => handleInputChange('password', e.target.value)}
+                                        disabled={isLoading}
+                                        className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 pr-12
+                               text-white placeholder-white/50 focus:outline-none transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               ${errors.password
+                                                ? 'border-red-400/50 focus:border-red-400/70'
+                                                : 'border-white/[0.12] focus:border-white/30'
+                                            }`}
+                                        placeholder="Minimo 6 caratteri"
+                                        required
+                                        minLength={6}
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        disabled={isLoading}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 
+                             text-white/70 hover:text-white transition-colors
+                             disabled:opacity-50"
+                                    >
+                                        {showPassword ? (
+                                            <EyeSlashIcon className="w-5 h-5" />
+                                        ) : (
+                                            <EyeIcon className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.password && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.password}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Conferma Password *
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        value={formData.confermaPassword}
+                                        onChange={(e) => handleInputChange('confermaPassword', e.target.value)}
+                                        disabled={isLoading}
+                                        className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 pr-12
+                               text-white placeholder-white/50 focus:outline-none transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               ${errors.confermaPassword
+                                                ? 'border-red-400/50 focus:border-red-400/70'
+                                                : 'border-white/[0.12] focus:border-white/30'
+                                            }`}
+                                        placeholder="Ripeti la password"
+                                        required
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        disabled={isLoading}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 
+                             text-white/70 hover:text-white transition-colors
+                             disabled:opacity-50"
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeSlashIcon className="w-5 h-5" />
+                                        ) : (
+                                            <EyeIcon className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </div>
+                                {errors.confermaPassword && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.confermaPassword}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ✅ RIGA 4: SESSO E DATA DI NASCITA */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Sesso *
+                                </label>
+                                <select
+                                    value={formData.sesso}
+                                    onChange={(e) => handleInputChange('sesso', e.target.value)}
+                                    disabled={isLoading}
+                                    className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 
+                             text-white focus:outline-none transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             [&>option]:bg-gray-800 [&>option]:text-white
+                             ${errors.sesso
+                                            ? 'border-red-400/50 focus:border-red-400/70'
+                                            : 'border-white/[0.12] focus:border-white/30'
+                                        }`}
+                                    required
+                                >
+                                    <option value="" className="bg-gray-800 text-white">Seleziona sesso</option>
+                                    <option value="maschio" className="bg-gray-800 text-white">Maschio</option>
+                                    <option value="femmina" className="bg-gray-800 text-white">Femmina</option>
+                                    <option value="altro" className="bg-gray-800 text-white">Altro</option>
+                                </select>
+                                {errors.sesso && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.sesso}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-white/70 text-sm mb-2">
+                                    Data di Nascita *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={formData.dataNascita}
+                                    onChange={(e) => handleInputChange('dataNascita', e.target.value)}
+                                    disabled={isLoading}
+                                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
+                                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 120)).toISOString().split('T')[0]}
+                                    className={`w-full backdrop-blur-xl bg-white/[0.08] border rounded-lg px-4 py-3 
+                             text-white focus:outline-none transition-all
+                             disabled:opacity-50 disabled:cursor-not-allowed
+                             ${errors.dataNascita
+                                            ? 'border-red-400/50 focus:border-red-400/70'
+                                            : 'border-white/[0.12] focus:border-white/30'
+                                        }`}
+                                    required
+                                />
+                                {errors.dataNascita && (
+                                    <p className="text-red-300 text-sm mt-1">{errors.dataNascita}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ✅ PULSANTE SUBMIT */}
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 
+                         border border-purple-400/30 text-white rounded-lg py-3 px-4 
+                         hover:from-purple-500/40 hover:to-pink-500/40 
+                         hover:border-purple-400/50 transition-all duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         flex items-center justify-center gap-2 font-medium"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                    Creazione account...
+                                </>
+                            ) : (
+                                'Crea Account'
+                            )}
+                        </button>
+                    </form>
+
+                    {/* Footer */}
+                    <div className="text-center mt-6 pt-6 border-t border-white/10">
+                        <p className="text-white/70">
+                            Hai già un account?{' '}
+                            <Link
+                                to="/login"
+                                className="text-purple-300 hover:text-purple-200 font-medium transition-colors"
+                            >
+                                Accedi qui
+                            </Link>
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
+export default RegisterPage;
