@@ -1,4 +1,4 @@
-// src/pages/CollectionsPage.jsx
+// src/pages/CollectionsPage.jsx - COLLECTIONCARD COMPLETA CON NAVIGAZIONE
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { collectionsService } from '../services/firebase';
@@ -6,11 +6,18 @@ import CreateCollectionModal from '../components/modals/CreateCollectionModal';
 import EditCollectionModal from '../components/modals/EditCollectionModal';
 import DeleteCollectionModal from '../components/modals/DeleteCollectionModal';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom'; // ✅ Import per navigazione
 import toast from 'react-hot-toast';
 
-// ✅ COMPONENTE COLLEZIONE CARD CON ACTION BUTTONS
+// ✅ COMPONENTE COLLEZIONE CARD CON NAVIGAZIONE E ACTION BUTTONS
 function CollectionCard({ collection, onEdit, onDelete }) {
     const [isHovered, setIsHovered] = useState(false);
+    const navigate = useNavigate(); // ✅ Hook per navigazione
+
+    // ✅ FUNZIONE PER APRIRE COLLEZIONE
+    const handleOpenCollection = () => {
+        navigate(`/collections/${collection.id}`);
+    };
 
     return (
         <div
@@ -19,8 +26,9 @@ function CollectionCard({ collection, onEdit, onDelete }) {
                  transition-all duration-300 cursor-pointer relative group"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={handleOpenCollection} // ✅ Click per aprire collezione
         >
-            {/* Content */}
+            {/* ✅ CONTENT */}
             <h3 className="text-white text-lg font-semibold mb-2 pr-20">
                 {collection.name}
             </h3>
@@ -29,17 +37,29 @@ function CollectionCard({ collection, onEdit, onDelete }) {
             </p>
             <div className="flex justify-between items-center text-white/50 text-sm">
                 <span>0 cards</span>
-                <span className="capitalize">{collection.gameId} TCG</span>
+                <span className="capitalize">
+                    {collection.gameId} TCG
+                    {collection.language && (
+                        <span className="ml-2">
+                            {collection.language === 'it' && '🇮🇹'}
+                            {collection.language === 'en' && '🇺🇸'}
+                            {collection.language === 'ja' && '🇯🇵'}
+                            {collection.language === 'fr' && '🇫🇷'}
+                            {collection.language === 'es' && '🇪🇸'}
+                            {collection.language === 'de' && '🇩🇪'}
+                        </span>
+                    )}
+                </span>
             </div>
 
-            {/* ✅ Floating Action Buttons - Appaiono al hover */}
+            {/* ✅ FLOATING ACTION BUTTONS - Appaiono al hover */}
             <div className={`absolute top-4 right-4 flex gap-2 transition-all duration-300 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
                 }`}>
 
                 {/* Edit Button */}
                 <button
                     onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // ✅ Previeni apertura collezione
                         onEdit(collection);
                     }}
                     className="p-2 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 
@@ -54,7 +74,7 @@ function CollectionCard({ collection, onEdit, onDelete }) {
                 {/* Delete Button */}
                 <button
                     onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // ✅ Previeni apertura collezione
                         onDelete(collection);
                     }}
                     className="p-2 backdrop-blur-xl bg-red-500/20 border border-red-400/30 
@@ -70,7 +90,7 @@ function CollectionCard({ collection, onEdit, onDelete }) {
     );
 }
 
-// ✅ COMPONENTE PRINCIPALE
+// ✅ COMPONENTE PRINCIPALE COLLECTIONS PAGE
 function CollectionsPage() {
     const { currentUser, loading } = useAuth();
     const [collections, setCollections] = useState([]);
@@ -229,7 +249,7 @@ function CollectionsPage() {
                         </div>
                     ))
                 ) : collections.length > 0 ? (
-                    // ✅ Mostra collezioni reali con nuove card
+                    // ✅ Mostra collezioni reali con nuove card navigate
                     collections.map((collection) => (
                         <CollectionCard
                             key={collection.id}
