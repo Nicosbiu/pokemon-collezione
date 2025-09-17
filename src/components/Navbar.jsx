@@ -1,10 +1,10 @@
-// Navbar.jsx - Versione Glass moderna
+// src/components/Navbar.jsx - Versione Glass moderna con Collections
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
 import {
     HomeIcon,
-    RectangleStackIcon,
+    FolderIcon,          // ✅ Cambiato da RectangleStackIcon
     PlusIcon,
     ChartBarIcon,
     UserIcon,
@@ -25,9 +25,10 @@ export default function Navbar() {
         }
     };
 
+    // ✅ AGGIORNATO: Collections invece di Pokédex
     const navItems = [
         { path: '/', label: 'Home', icon: <HomeIcon className="w-5 h-5" /> },
-        { path: '/pokedex', label: 'Pokédex', icon: <RectangleStackIcon className="w-5 h-5" /> },
+        { path: '/collections', label: 'Collections', icon: <FolderIcon className="w-5 h-5" /> }, // ✅ CAMBIATO
         { path: '/add-card', label: 'Aggiungi', icon: <PlusIcon className="w-5 h-5" /> },
         { path: '/stats', label: 'Stats', icon: <ChartBarIcon className="w-5 h-5" /> },
     ];

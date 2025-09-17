@@ -36,11 +36,11 @@ export const collectionsService = {
     // Crea una nuova collezione
     async createCollection(collectionData, userId) {
         try {
-            // ✅ Crea documento in /collections
             const docRef = await addDoc(collection(db, 'collections'), {
                 name: collectionData.name,
                 description: collectionData.description || '',
                 gameId: collectionData.gameId,
+                language: collectionData.language || 'en', // ✅ LINGUA COLLEZIONE
                 ownerId: userId,
                 members: {
                     [userId]: {
@@ -53,7 +53,6 @@ export const collectionsService = {
                 updatedAt: serverTimestamp()
             });
 
-            console.log('✅ Collection created with ID:', docRef.id);
             return docRef.id;
         } catch (error) {
             console.error('❌ Error creating collection:', error);
@@ -112,6 +111,28 @@ export const collectionsService = {
             return collections;
         } catch (error) {
             console.error('❌ Error fetching collections:', error);
+            throw error;
+        }
+    },
+
+    // ✅ Aggiungi carta CON lingua alla collezione
+    async addCardToCollection(collectionId, cardData, language) {
+        try {
+            const cardRef = doc(db, 'collections', collectionId, 'cards', cardData.id);
+            await setDoc(cardRef, {
+                cardId: cardData.id,
+                name: cardData.name,
+                setId: cardData.set?.id,
+                language: language,           // ✅ LINGUA CARTA
+                imageUrl: cardData.image,
+                owned: true,
+                quantity: 1,
+                addedAt: serverTimestamp()
+            });
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error adding card to collection:', error);
             throw error;
         }
     }

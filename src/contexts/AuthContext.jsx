@@ -1,7 +1,7 @@
 // src/contexts/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebase'; // ✅ Solo questo import Firebase
+import { onAuthStateChanged, signOut } from 'firebase/auth'; // ✅ Importa signOut
+import { auth } from '../services/firebase';
 
 const AuthContext = createContext();
 
@@ -14,16 +14,16 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        console.log('🔥 AuthContext: Setting up onAuthStateChanged'); // Debug
+        console.log('🔥 AuthContext: Setting up onAuthStateChanged');
 
         const unsubscribe = onAuthStateChanged(auth,
             (user) => {
-                console.log('🔥 AuthContext: Auth state changed', user?.email); // Debug
+                console.log('🔥 AuthContext: Auth state changed', user?.email);
                 setCurrentUser(user);
                 setLoading(false);
             },
             (error) => {
-                console.error('🔥 AuthContext: Auth error', error); // Debug
+                console.error('🔥 AuthContext: Auth error', error);
                 setLoading(false);
             }
         );
@@ -31,9 +31,22 @@ export function AuthProvider({ children }) {
         return unsubscribe;
     }, []);
 
+    // ✅ FUNZIONE LOGOUT
+    const logout = async () => {
+        try {
+            console.log('🔥 AuthContext: Logging out user');
+            await signOut(auth);
+            console.log('✅ AuthContext: User logged out successfully');
+        } catch (error) {
+            console.error('❌ AuthContext: Logout error:', error);
+            throw error;
+        }
+    };
+
     const value = {
         currentUser,
-        loading
+        loading,
+        logout // ✅ Includi logout nel context
     };
 
     return (

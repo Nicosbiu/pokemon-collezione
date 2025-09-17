@@ -1,17 +1,20 @@
 // src/components/CreateCollectionModal.jsx
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { pokemonAPI } from '../services/pokemonAPI';
 
 function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false }) {
     const initialFormState = {
         name: '',
         description: '',
-        gameId: 'pokemon'
+        gameId: 'pokemon',
+        language: 'en' // ✅ LINGUA DEFAULT
     };
 
     const [formData, setFormData] = useState(initialFormState);
+    const supportedLanguages = pokemonAPI.getSupportedLanguages();
 
-    // ✅ RESET FORM quando il modal si chiude
+    // Reset form quando il modal si chiude
     useEffect(() => {
         if (!isOpen) {
             setFormData(initialFormState);
@@ -21,7 +24,6 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     const handleSubmit = (e) => {
         e.preventDefault();
         onSubmit(formData);
-        // ❌ NON resettare qui, sarà fatto automaticamente quando il modal si chiude
     };
 
     if (!isOpen) return null;
@@ -80,6 +82,29 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                         />
                     </div>
 
+                    {/* ✅ LINGUA COLLEZIONE - STILE CORRETTO */}
+                    <div>
+                        <label className="block text-white/70 text-sm mb-2">
+                            Collection Language
+                        </label>
+                        <select
+                            value={formData.language}
+                            onChange={(e) => setFormData({ ...formData, language: e.target.value })}
+                            disabled={isLoading}
+                            className="w-full backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                         rounded-lg px-4 py-3 text-white 
+                         focus:outline-none focus:border-white/30 transition-all
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         [&>option]:bg-gray-800 [&>option]:text-white"
+                        >
+                            {Object.entries(supportedLanguages).map(([code, info]) => (
+                                <option key={code} value={code} className="bg-gray-800 text-white">
+                                    {info.flag} {info.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div>
                         <label className="block text-white/70 text-sm mb-2">
                             Card Game
@@ -91,11 +116,12 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                             className="w-full backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
                          rounded-lg px-4 py-3 text-white 
                          focus:outline-none focus:border-white/30 transition-all
-                         disabled:opacity-50 disabled:cursor-not-allowed"
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         [&>option]:bg-gray-800 [&>option]:text-white"
                         >
-                            <option value="pokemon">Pokémon TCG</option>
-                            <option value="magic" disabled>Magic: The Gathering (Coming Soon)</option>
-                            <option value="yugioh" disabled>Yu-Gi-Oh! (Coming Soon)</option>
+                            <option value="pokemon" className="bg-gray-800 text-white">Pokémon TCG</option>
+                            <option value="magic" disabled className="bg-gray-800 text-white/50">Magic: The Gathering (Coming Soon)</option>
+                            <option value="yugioh" disabled className="bg-gray-800 text-white/50">Yu-Gi-Oh! (Coming Soon)</option>
                         </select>
                     </div>
 
