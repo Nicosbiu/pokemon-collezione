@@ -6,12 +6,15 @@ import {
     collection,
     addDoc,
     doc,
+    setDoc,
+    getDoc,
     getDocs,
     query,
     where,
     updateDoc,
     deleteDoc,
-    serverTimestamp
+    serverTimestamp,
+    writeBatch,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -135,6 +138,80 @@ export const collectionsService = {
         } catch (error) {
             console.error('❌ Error adding card to collection:', error);
             throw error;
+        }
+    },
+
+    // ✅ NUOVA: Crea collezione base con set completo
+    async createBaseCollection(collectionData, setData, setCards, isComplete = false) {
+        const batch = writeBatch(db);
+
+        try {
+            // 1. Crea il documento collezione principale
+            const collectionRef = doc(collection(db, 'collections'));
+            const collectionId = collectionRef.id;
+
+            batch.set(collectionRef, {
+                ...collectionData,
+                id: collectionId,
+                type: 'base',
+                setId: setData.id,
+                setName: setData.name,
+                totalCards: setCards.length,
+                ownedCards: isComplete ? setCards.length : 0,
+                isComplete: isComplete,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            // 2. Salva il set nella cache se non esiste già
+            const setRef = doc(db, 'sets', setData.id);
+            batch.set(setRef, setData, { merge: true });
+
+            // 3. Salva tutte le carte nella cache
+            setCards.forEach(card => {
+                const cardRef = doc(db, 'cards', card.id);
+                batch.set(cardRef, {
+                    ...card,
+                    setId: setData.id,
+                    language: collectionData.language
+                }, { merge: true });
+            });
+
+            // 4. Crea i record di ownership per ogni carta
+            setCards.forEach(card => {
+                const ownershipRef = doc(
+                    db,
+                    'ownership',
+                    `${collectionData.ownerId}_${collectionId}_${card.id}`
+                );
+                batch.set(ownershipRef, {
+                    userId: collectionData.ownerId,
+                    collectionId: collectionId,
+                    cardId: card.id,
+                    owned: isComplete,
+                    addedAt: serverTimestamp()
+                });
+            });
+
+            // 5. Commit della batch operation
+            await batch.commit();
+
+            return { success: true, collectionId };
+
+        } catch (error) {
+            console.error('❌ Error creating base collection:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // ✅ NUOVA: Verifica se un set è già in cache
+    async getSetFromCache(setId) {
+        try {
+            const setDoc = await getDoc(doc(db, 'sets', setId));
+            return setDoc.exists() ? { id: setDoc.id, ...setDoc.data() } : null;
+        } catch (error) {
+            console.error('❌ Error getting set from cache:', error);
+            return null;
         }
     }
 };

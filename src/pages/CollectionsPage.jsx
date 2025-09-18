@@ -105,19 +105,12 @@ function CollectionsPage() {
     };
 
     // ✅ CREA COLLEZIONE
-    const handleCreateCollection = async (collectionData) => {
-        try {
-            setIsLoading(true);
-            await collectionsService.createCollection(collectionData, currentUser.uid);
-            await loadCollections();
-            setIsCreateModalOpen(false);
-            toast.success(`Collection "${collectionData.name}" created successfully! 🎉`);
-        } catch (error) {
-            console.error('❌ Error creating collection:', error);
-            toast.error('Failed to create collection. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleCreateCollection = async () => {
+        // Non riceve più collectionData perché viene gestito dal modal interno
+        // Ricarica semplicemente le collezioni dopo la creazione
+        await loadCollections();
+        setIsCreateModalOpen(false);
+        // Il toast di successo viene già mostrato dal modal
     };
 
     // ✅ MODIFICA COLLEZIONE
@@ -267,7 +260,7 @@ function CollectionsPage() {
             <CreateCollectionModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onSubmit={handleCreateCollection}
+                onSubmit={handleCreateCollection}  // Solo callback per reload
                 isLoading={isLoading}
             />
 
