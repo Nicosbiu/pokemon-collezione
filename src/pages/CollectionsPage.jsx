@@ -1,5 +1,6 @@
 // src/pages/CollectionsPage.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ AGGIUNGI IMPORT
 import { useAuth } from '../contexts/AuthContext';
 import { collectionsService } from '../services/firebase';
 import CreateCollectionModal from '../components/modals/CreateCollectionModal';
@@ -8,8 +9,8 @@ import DeleteCollectionModal from '../components/modals/DeleteCollectionModal';
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
-// ✅ COMPONENTE COLLEZIONE CARD CON ACTION BUTTONS
-function CollectionCard({ collection, onEdit, onDelete }) {
+// ✅ COMPONENTE COLLEZIONE CARD CON NAVIGAZIONE
+function CollectionCard({ collection, onEdit, onDelete, onView }) {
     const [isHovered, setIsHovered] = useState(false);
 
     return (
@@ -19,17 +20,45 @@ function CollectionCard({ collection, onEdit, onDelete }) {
                  transition-all duration-300 cursor-pointer relative group"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={() => onView(collection)} // ✅ CLIC SULLA CARD = APRI BINDER
         >
             {/* Content */}
             <h3 className="text-white text-lg font-semibold mb-2 pr-20">
                 {collection.name}
             </h3>
             <p className="text-white/70 text-sm mb-4 line-clamp-2">
-                {collection.description || 'No description provided.'}
+                {collection.description || 'Nessuna descrizione fornita.'}
             </p>
+
+            {/* ✅ STATISTICHE AGGIORNATE */}
             <div className="flex justify-between items-center text-white/50 text-sm">
-                <span>0 cards</span>
+                <span>
+                    {collection.ownedCards || 0}/{collection.totalCards || 0} carte
+                </span>
                 <span className="capitalize">{collection.gameId} TCG</span>
+            </div>
+
+            {/* ✅ PROGRESS BAR PICCOLA */}
+            {collection.totalCards > 0 && (
+                <div className="mt-3 w-full bg-white/10 rounded-full h-1">
+                    <div
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-1 rounded-full transition-all duration-500"
+                        style={{
+                            width: `${Math.round(((collection.ownedCards || 0) / collection.totalCards) * 100)}%`
+                        }}
+                    ></div>
+                </div>
+            )}
+
+            {/* ✅ BADGE TIPO COLLEZIONE */}
+            <div className="absolute top-4 left-4">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium
+                               ${collection.type === 'base'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+                        : 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+                    }`}>
+                    {collection.type === 'base' ? collection.setName || 'Base Set' : 'Personalizzata'}
+                </span>
             </div>
 
             {/* ✅ Floating Action Buttons - Appaiono al hover */}
@@ -39,14 +68,14 @@ function CollectionCard({ collection, onEdit, onDelete }) {
                 {/* Edit Button */}
                 <button
                     onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // ✅ PREVIENI NAVIGAZIONE
                         onEdit(collection);
                     }}
                     className="p-2 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 
                      text-blue-300 rounded-lg hover:bg-blue-500/30 hover:border-blue-400/50 
                      hover:text-blue-200 transition-all duration-200 
                      hover:shadow-lg hover:shadow-blue-500/25"
-                    title="Edit Collection"
+                    title="Modifica Collezione"
                 >
                     <PencilIcon className="w-4 h-4" />
                 </button>
@@ -54,42 +83,47 @@ function CollectionCard({ collection, onEdit, onDelete }) {
                 {/* Delete Button */}
                 <button
                     onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // ✅ PREVIENI NAVIGAZIONE
                         onDelete(collection);
                     }}
                     className="p-2 backdrop-blur-xl bg-red-500/20 border border-red-400/30 
                      text-red-300 rounded-lg hover:bg-red-500/30 hover:border-red-400/50 
                      hover:text-red-200 transition-all duration-200 
                      hover:shadow-lg hover:shadow-red-500/25"
-                    title="Delete Collection"
+                    title="Elimina Collezione"
                 >
                     <TrashIcon className="w-4 h-4" />
                 </button>
             </div>
+
+            {/* ✅ INDICATORE CLICCABILE */}
+            <div className={`absolute inset-0 rounded-2xl border-2 border-transparent 
+                           transition-all duration-200 pointer-events-none
+                           ${isHovered ? 'border-purple-400/30' : ''}`}></div>
         </div>
     );
 }
 
 // ✅ COMPONENTE PRINCIPALE
 function CollectionsPage() {
+    const navigate = useNavigate(); // ✅ AGGIUNGI HOOK
     const { currentUser, loading } = useAuth();
     const [collections, setCollections] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Stati per i modal
+    // Stati per i modal - mantieni quelli esistenti
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedCollection, setSelectedCollection] = useState(null);
 
-    // Carica collezioni all'avvio
+    // ✅ Le tue funzioni esistenti rimangono uguali
     useEffect(() => {
         if (currentUser) {
             loadCollections();
         }
     }, [currentUser]);
 
-    // ✅ CARICA COLLEZIONI
     const loadCollections = async () => {
         try {
             setIsLoading(true);
@@ -98,22 +132,23 @@ function CollectionsPage() {
             console.log('📚 Loaded collections:', userCollections);
         } catch (error) {
             console.error('❌ Error loading collections:', error);
-            toast.error('Failed to load collections');
+            toast.error('Errore nel caricamento delle collezioni');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // ✅ CREA COLLEZIONE
-    const handleCreateCollection = async () => {
-        // Non riceve più collectionData perché viene gestito dal modal interno
-        // Ricarica semplicemente le collezioni dopo la creazione
-        await loadCollections();
-        setIsCreateModalOpen(false);
-        // Il toast di successo viene già mostrato dal modal
+    // ✅ NUOVA FUNZIONE - NAVIGA AL BINDER
+    const handleViewCollection = (collection) => {
+        navigate(`/collection/${collection.id}`);
     };
 
-    // ✅ MODIFICA COLLEZIONE
+    // ✅ Mantieni le tue funzioni esistenti...
+    const handleCreateCollection = async () => {
+        await loadCollections();
+        setIsCreateModalOpen(false);
+    };
+
     const handleEditCollection = async (collectionId, updateData) => {
         try {
             setIsLoading(true);
@@ -121,16 +156,15 @@ function CollectionsPage() {
             await loadCollections();
             setIsEditModalOpen(false);
             setSelectedCollection(null);
-            toast.success(`Collection "${updateData.name}" updated successfully! ✏️`);
+            toast.success(`Collezione "${updateData.name}" aggiornata con successo! ✏️`);
         } catch (error) {
             console.error('❌ Error updating collection:', error);
-            toast.error('Failed to update collection. Please try again.');
+            toast.error('Errore nell\'aggiornamento della collezione');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // ✅ ELIMINA COLLEZIONE
     const handleDeleteCollection = async (collectionId) => {
         try {
             setIsLoading(true);
@@ -138,28 +172,26 @@ function CollectionsPage() {
             await loadCollections();
             setIsDeleteModalOpen(false);
             setSelectedCollection(null);
-            toast.success('Collection deleted successfully! 🗑️');
+            toast.success('Collezione eliminata con successo! 🗑️');
         } catch (error) {
             console.error('❌ Error deleting collection:', error);
-            toast.error('Failed to delete collection. Please try again.');
+            toast.error('Errore nell\'eliminazione della collezione');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // ✅ HANDLER PER APRIRE MODAL DI MODIFICA
     const openEditModal = (collection) => {
         setSelectedCollection(collection);
         setIsEditModalOpen(true);
     };
 
-    // ✅ HANDLER PER APRIRE MODAL DI ELIMINAZIONE
     const openDeleteModal = (collection) => {
         setSelectedCollection(collection);
         setIsDeleteModalOpen(true);
     };
 
-    // Loading iniziale
+    // Loading iniziale - mantieni uguale
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black 
@@ -168,7 +200,7 @@ function CollectionsPage() {
                         rounded-2xl p-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 
                           border-white mx-auto"></div>
-                    <p className="text-white/70 mt-4 text-center">Loading...</p>
+                    <p className="text-white/70 mt-4 text-center">Caricamento...</p>
                 </div>
             </div>
         );
@@ -178,16 +210,16 @@ function CollectionsPage() {
         <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black 
                     pt-32 p-8">
 
-            {/* ✅ HEADER */}
+            {/* ✅ HEADER - aggiorna i testi in italiano */}
             <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
                       rounded-2xl p-8 mb-8">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                     <div>
                         <h1 className="text-white text-3xl font-bold mb-2">
-                            Your Collections ⚡
+                            Le Tue Collezioni ⚡
                         </h1>
                         <p className="text-white/70">
-                            Welcome back, {currentUser?.email}! You have {collections.length} collection(s).
+                            Bentornato, {currentUser?.email}! Hai {collections.length} collezione/i.
                         </p>
                     </div>
                     <button
@@ -201,7 +233,7 @@ function CollectionsPage() {
                        disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <PlusIcon className="w-5 h-5" />
-                        {isLoading ? 'Creating...' : 'New Collection'}
+                        {isLoading ? 'Creazione...' : 'Nuova Collezione'}
                     </button>
                 </div>
             </div>
@@ -222,13 +254,14 @@ function CollectionsPage() {
                         </div>
                     ))
                 ) : collections.length > 0 ? (
-                    // ✅ Mostra collezioni reali con nuove card
+                    // ✅ Mostra collezioni reali con navigazione
                     collections.map((collection) => (
                         <CollectionCard
                             key={collection.id}
                             collection={collection}
                             onEdit={openEditModal}
                             onDelete={openDeleteModal}
+                            onView={handleViewCollection} // ✅ NUOVA PROP
                         />
                     ))
                 ) : (
@@ -236,10 +269,10 @@ function CollectionsPage() {
                     <div className="col-span-full backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
                           rounded-2xl p-8 text-center">
                         <p className="text-white/70 text-lg mb-4">
-                            📚 No collections yet
+                            📚 Nessuna collezione ancora
                         </p>
                         <p className="text-white/50 text-sm mb-6">
-                            Create your first collection to start organizing your cards!
+                            Crea la tua prima collezione per iniziare a organizzare le tue carte!
                         </p>
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
@@ -250,21 +283,20 @@ function CollectionsPage() {
                          inline-flex items-center gap-2"
                         >
                             <PlusIcon className="w-5 h-5" />
-                            Create First Collection
+                            Crea Prima Collezione
                         </button>
                     </div>
                 )}
             </div>
 
-            {/* ✅ MODAL CREATION */}
+            {/* ✅ I tuoi modal rimangono uguali */}
             <CreateCollectionModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onSubmit={handleCreateCollection}  // Solo callback per reload
+                onSubmit={handleCreateCollection}
                 isLoading={isLoading}
             />
 
-            {/* ✅ MODAL EDIT */}
             <EditCollectionModal
                 isOpen={isEditModalOpen}
                 onClose={() => {
@@ -276,7 +308,6 @@ function CollectionsPage() {
                 isLoading={isLoading}
             />
 
-            {/* ✅ MODAL DELETE */}
             <DeleteCollectionModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => {
