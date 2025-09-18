@@ -14,7 +14,6 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
 
-    // ✅ SEMPLIFICATO: usa direttamente le immagini dalla cache database
     const imageUrl = card.images?.small || card.images?.large || null;
 
     return (
@@ -31,7 +30,6 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                     </div>
                 )}
 
-                {/* ✅ IMMAGINE DIRETTA dal database */}
                 {imageUrl && !imageError ? (
                     <img
                         src={imageUrl}
@@ -48,7 +46,6 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                         }}
                     />
                 ) : (
-                    // Fallback
                     <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-pink-900/20 
                                    rounded-lg flex flex-col items-center justify-center text-white/60 
                                    border border-white/5">
@@ -58,17 +55,18 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                     </div>
                 )}
 
-                {/* Toggle button e resto uguale... */}
+                {/* ✅ TOGGLE BUTTON - Sempre visibile e funzionante */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
+                        console.log('🔄 Toggling card:', card.id, 'from', isOwned, 'to', !isOwned); // Debug
                         onToggleOwn(card.id);
                     }}
                     className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-sm 
                               border-2 transition-all duration-200 
                               ${isOwned
-                            ? 'bg-green-500/90 border-green-400/70 text-white shadow-lg shadow-green-500/25 scale-100'
-                            : 'bg-black/70 border-white/30 text-white/70 hover:text-white hover:bg-black/90 scale-90 group-hover:scale-100'
+                            ? 'bg-green-500/90 border-green-400/70 text-white shadow-lg shadow-green-500/25'
+                            : 'bg-black/70 border-white/30 text-white/70 hover:text-white hover:bg-black/90'
                         }`}
                 >
                     {isOwned ?
@@ -87,12 +85,12 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                 )}
             </div>
 
-            {/* Info carta */}
+            {/* ✅ INFO CARTA - Spazio corretto per lettere con discendenti (g, j, p, q, y) */}
             <div className="text-center space-y-2">
-                <h3 className="text-white text-sm font-medium truncate leading-tight">
+                <h3 className="text-white text-sm font-medium truncate leading-tight min-h-[1.2rem]"> {/* ✅ min-height fissa */}
                     {card.name}
                 </h3>
-                <div className="flex justify-between items-center text-xs text-white/60">
+                <div className="flex justify-between items-center text-xs text-white/60 min-h-[1rem]"> {/* ✅ min-height per descrizione */}
                     <span className="font-mono">#{card.number}</span>
                     {card.rarity && (
                         <span className="capitalize truncate ml-2">{card.rarity}</span>
@@ -161,7 +159,9 @@ function CollectionViewPage() {
     const handleToggleCardOwnership = async (cardId) => {
         try {
             const wasOwned = ownedCards.has(cardId);
+            console.log('🔄 Toggle attempt:', { cardId, wasOwned, newState: !wasOwned }); // Debug
 
+            // Optimistic update
             const newOwnedCards = new Set(ownedCards);
             if (wasOwned) {
                 newOwnedCards.delete(cardId);
@@ -170,24 +170,36 @@ function CollectionViewPage() {
             }
             setOwnedCards(newOwnedCards);
 
-            await collectionsService.updateCardOwnership(
-                currentUser.uid,
-                id,
-                cardId,
-                !wasOwned
-            );
+            // ✅ CHIAMATA DATABASE - Con retry logic
+            try {
+                await collectionsService.updateCardOwnership(
+                    currentUser.uid,
+                    id,
+                    cardId,
+                    !wasOwned
+                );
 
-            const card = cards.find(c => c.id === cardId);
-            toast.success(
-                wasOwned
-                    ? `${card?.name} rimossa dalla collezione`
-                    : `${card?.name} aggiunta alla collezione! 🎉`
-            );
+                const card = cards.find(c => c.id === cardId);
+                toast.success(
+                    wasOwned
+                        ? `${card?.name} rimossa dalla collezione`
+                        : `${card?.name} aggiunta alla collezione! 🎉`
+                );
+
+            } catch (dbError) {
+                console.error('❌ Database error, reverting UI:', dbError);
+                // Revert optimistic update
+                setOwnedCards(ownedCards);
+                toast.error('Errore nel salvataggio. Riprova.');
+            }
 
         } catch (error) {
             console.error('❌ Error toggling card ownership:', error);
             toast.error('Errore nell\'aggiornamento della carta');
-            loadCollectionData();
+            // Force reload in case of persistent issues
+            setTimeout(() => {
+                loadCollectionData();
+            }, 1000);
         }
     };
 

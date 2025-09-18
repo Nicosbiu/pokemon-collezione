@@ -283,9 +283,12 @@ export const collectionsService = {
     // ✅ MANTIENI - Aggiorna ownership
     async updateCardOwnership(userId, collectionId, cardId, owned) {
         try {
+            console.log('🔥 Updating ownership:', { userId, collectionId, cardId, owned }); // Debug
+
             const ownershipId = `${userId}_${collectionId}_${cardId}`;
             const ownershipRef = doc(db, 'ownership', ownershipId);
 
+            // ✅ USA setDoc con merge invece di updateDoc
             await setDoc(ownershipRef, {
                 userId,
                 collectionId,
@@ -294,16 +297,25 @@ export const collectionsService = {
                 updatedAt: serverTimestamp()
             }, { merge: true });
 
+            console.log('✅ Ownership updated successfully'); // Debug
+
             // Aggiorna contatore collezione
+            const collectionRef = doc(db, 'collections', collectionId);
             if (owned) {
-                await this.incrementOwnedCards(collectionId);
+                await updateDoc(collectionRef, {
+                    ownedCards: increment(1),
+                    updatedAt: serverTimestamp()
+                });
             } else {
-                await this.decrementOwnedCards(collectionId);
+                await updateDoc(collectionRef, {
+                    ownedCards: increment(-1),
+                    updatedAt: serverTimestamp()
+                });
             }
 
         } catch (error) {
             console.error('❌ Error updating card ownership:', error);
-            throw error;
+            throw error; // Re-throw per gestione nell'UI
         }
     },
 

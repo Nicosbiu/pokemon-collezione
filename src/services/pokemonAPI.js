@@ -92,44 +92,81 @@ export class PokemonAPI {
     }
 
     // ✅ OTTIENI CARTE PER SET - SINTASSI CORRETTA
-    static async getCardsBySet(setId, language = 'en', page = 1, pageSize = 250) { // ✅ Aumenta pageSize
+    static async getCardsBySet(setId, language = 'en', page = 1, pageSize = 250) {
         try {
-            const tcgdex = new TCGdex(language);
+            console.log(`🔍 Fetching cards for set ${setId} in ${language}...`);
 
-            // ✅ USA fetch per ottenere il set e le sue carte
-            const set = await tcgdex.fetch('sets', setId);
+            const tcgdx = this.getClient(language);
+            const set = await tcgdx.fetch('sets', setId);
 
-            // Le carte sono già incluse nel set
-            let cards = set?.cards || [];
+            if (!set || !set.cards) {
+                throw new Error(`Set ${setId} not found or has no cards`);
+            }
 
-            // ✅ IMPORTANTE: Assicurati che le carte abbiano le immagini
-            cards = cards.map(card => ({
-                ...card,
-                images: card.image ? {
-                    small: card.image,
-                    large: card.image
-                } : null,
-                setId: setId
-            }));
+            // ✅ HELPER: Costruisci URL immagine secondo documentazione TCGdx
+            const buildTCGdxImageUrl = (baseImageUrl) => {
+                if (!baseImageUrl) return null;
 
-            // Paginazione manuale
+                // Se l'URL ha già un'estensione, usala così com'è
+                if (baseImageUrl.includes('.png') || baseImageUrl.includes('.jpg') || baseImageUrl.includes('.webp')) {
+                    return baseImageUrl;
+                }
+
+                // ✅ FORMATO CORRETTO secondo documentazione TCGdx
+                // {base_url}/{quality}.{extension}
+                return {
+                    small: `${baseImageUrl}/low.webp`,    // 245x337 per thumbnail
+                    large: `${baseImageUrl}/high.webp`    // 600x825 per visualizzazione
+                };
+            };
+
+            // ✅ MAPPA LE CARTE CON IMMAGINI CORRETTE
+            const cardsWithImages = set.cards.map(card => {
+                const imageUrls = buildTCGdxImageUrl(card.image);
+
+                return {
+                    id: card.id,
+                    name: card.name || 'Unknown',
+                    number: card.localId || card.number || '1',
+                    rarity: card.rarity || 'Common',
+                    types: card.types || [],
+                    hp: card.hp || null,
+                    setId: setId,
+                    // ✅ IMMAGINI CON FORMATO CORRETTO
+                    images: imageUrls || {
+                        small: null,
+                        large: null
+                    },
+                    set: {
+                        id: setId,
+                        name: set.name || 'Unknown Set'
+                    }
+                };
+            }).filter(card => card.id && card.images && card.images.small); // ✅ Filtra carte senza immagini
+
+            // Paginazione
             const startIndex = (page - 1) * pageSize;
             const endIndex = startIndex + pageSize;
-            const paginatedCards = cards.slice(startIndex, endIndex);
+            const paginatedCards = cardsWithImages.slice(startIndex, endIndex);
+
+            console.log(`✅ Processed ${paginatedCards.length} cards with images`);
+            console.log('📷 Sample image URLs:');
+            console.log('  Small:', paginatedCards[0]?.images?.small);
+            console.log('  Large:', paginatedCards[0]?.images?.large);
 
             return {
                 data: paginatedCards,
-                total: cards.length,
+                total: cardsWithImages.length,
                 page: page,
                 pageSize: pageSize,
-                totalPages: Math.ceil(cards.length / pageSize),
+                totalPages: Math.ceil(cardsWithImages.length / pageSize),
                 language: language,
                 setId: setId,
-                source: 'tcgdex.net'
+                source: 'tcgdx'
             };
 
         } catch (error) {
-            console.error('❌ Error in getCardsBySet:', error);
+            console.error(`❌ Error in PokemonAPI.getCardsBySet for ${setId}:`, error);
             return {
                 data: [],
                 total: 0,
@@ -137,7 +174,7 @@ export class PokemonAPI {
                 language: language,
                 setId: setId,
                 error: error.message,
-                source: 'tcgdex.net'
+                source: 'tcgdx'
             };
         }
     }
