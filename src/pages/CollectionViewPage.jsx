@@ -13,75 +13,28 @@ import toast from 'react-hot-toast';
 function PokemonCard({ card, isOwned, onToggleOwn }) {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
-    const [cardImageUrl, setCardImageUrl] = useState(null);
 
-    // ✅ CARICA IMMAGINE DALL'API se non presente
-    useEffect(() => {
-        const loadCardImage = async () => {
-            if (card.images?.small || card.images?.large) {
-                // Se abbiamo già l'immagine dalla cache, usala
-                setCardImageUrl(card.images.small || card.images.large);
-                setImageLoading(false);
-                return;
-            }
-
-            try {
-                // Altrimenti richiedi dall'API
-                setImageLoading(true);
-                const apiCard = await PokemonAPI.getCardById(card.id, card.language || 'it');
-
-                if (apiCard && apiCard.images) {
-                    setCardImageUrl(apiCard.images.small || apiCard.images.large);
-                } else {
-                    setImageError(true);
-                }
-            } catch (error) {
-                console.error('❌ Error loading card image:', error);
-                setImageError(true);
-            } finally {
-                setImageLoading(false);
-            }
-        };
-
-        loadCardImage();
-    }, [card.id, card.language, card.images]);
-
-    // ✅ DETERMINA RARITY COLOR
-    const getRarityColor = (rarity) => {
-        if (!rarity) return 'bg-gray-500/20 text-gray-300';
-
-        const rarityLower = rarity.toLowerCase();
-        if (rarityLower.includes('common')) return 'bg-gray-500/20 text-gray-300';
-        if (rarityLower.includes('uncommon')) return 'bg-green-500/20 text-green-300';
-        if (rarityLower.includes('rare holo') || rarityLower.includes('ultra rare')) return 'bg-purple-500/20 text-purple-300';
-        if (rarityLower.includes('rare')) return 'bg-blue-500/20 text-blue-300';
-        if (rarityLower.includes('secret') || rarityLower.includes('rainbow')) return 'bg-yellow-500/20 text-yellow-300';
-        return 'bg-pink-500/20 text-pink-300'; // Altri rari
-    };
+    // ✅ SEMPLIFICATO: usa direttamente le immagini dalla cache database
+    const imageUrl = card.images?.small || card.images?.large || null;
 
     return (
         <div className="group relative backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
                        rounded-xl p-3 hover:bg-white/10 hover:border-white/20 
                        transition-all duration-300 cursor-pointer">
 
-            {/* ✅ IMMAGINE CARTA - Aspect ratio più grande con 6 per riga */}
             <div className="relative mb-3 aspect-[2.5/3.5]">
 
-                {/* Loading Skeleton */}
-                {imageLoading && !imageError && (
+                {imageLoading && !imageError && imageUrl && (
                     <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/10 rounded-lg 
                                    animate-pulse flex items-center justify-center">
-                        <div className="flex flex-col items-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/40 mb-2"></div>
-                            <div className="text-white/40 text-xs">Caricamento...</div>
-                        </div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/40"></div>
                     </div>
                 )}
 
-                {/* Immagine Carta */}
-                {!imageError && cardImageUrl ? (
+                {/* ✅ IMMAGINE DIRETTA dal database */}
+                {imageUrl && !imageError ? (
                     <img
-                        src={cardImageUrl}
+                        src={imageUrl}
                         alt={card.name}
                         className={`w-full h-full object-cover rounded-lg shadow-lg transition-all duration-300
                                   ${imageLoading ? 'opacity-0' : 'opacity-100'}
@@ -95,7 +48,7 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                         }}
                     />
                 ) : (
-                    // ✅ FALLBACK MIGLIORATO per carte senza immagine
+                    // Fallback
                     <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-pink-900/20 
                                    rounded-lg flex flex-col items-center justify-center text-white/60 
                                    border border-white/5">
@@ -105,7 +58,7 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                     </div>
                 )}
 
-                {/* ✅ OWNED TOGGLE BUTTON - Più visibile */}
+                {/* Toggle button e resto uguale... */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -124,7 +77,6 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                     }
                 </button>
 
-                {/* ✅ OVERLAY per carte non possedute */}
                 {!isOwned && (
                     <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center 
                                    opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -133,39 +85,19 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
                         </div>
                     </div>
                 )}
-
-                {/* ✅ BADGE RARITY - Piccolo badge in alto a sinistra */}
-                {card.rarity && (
-                    <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium border
-                                       ${getRarityColor(card.rarity)} 
-                                       backdrop-blur-sm`}>
-                            {card.rarity === 'Rare Holo' ? 'Holo' :
-                                card.rarity === 'Ultra Rare' ? 'Ultra' :
-                                    card.rarity.split(' ')[0]}
-                        </span>
-                    </div>
-                )}
             </div>
 
-            {/* ✅ INFO CARTA - Ottimizzate per 6 per riga */}
+            {/* Info carta */}
             <div className="text-center space-y-2">
                 <h3 className="text-white text-sm font-medium truncate leading-tight">
                     {card.name}
                 </h3>
                 <div className="flex justify-between items-center text-xs text-white/60">
                     <span className="font-mono">#{card.number}</span>
-                    <span className="capitalize truncate ml-2">{card.set?.name || 'Set'}</span>
+                    {card.rarity && (
+                        <span className="capitalize truncate ml-2">{card.rarity}</span>
+                    )}
                 </div>
-
-                {/* ✅ RARITY BADGE SOTTO */}
-                {card.rarity && (
-                    <div className="flex justify-center">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getRarityColor(card.rarity)}`}>
-                            {card.rarity}
-                        </span>
-                    </div>
-                )}
             </div>
         </div>
     );
@@ -283,7 +215,7 @@ function CollectionViewPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-20 px-4">
+            <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-32 px-4">
                 <div className="max-w-7xl mx-auto text-center py-16">
                     <div className="text-red-400 text-lg mb-4">{error}</div>
                     <button
@@ -301,7 +233,7 @@ function CollectionViewPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-20 px-4">
+        <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-32 px-4">
             <div className="max-w-7xl mx-auto">
 
                 {/* Header e Stats - uguali a prima */}

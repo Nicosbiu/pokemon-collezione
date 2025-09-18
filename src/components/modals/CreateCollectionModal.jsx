@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { XMarkIcon, ChevronLeftIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { collectionsService } from '../../services/firebase';
-import { PokemonAPI } from '../../services/pokemonAPI';
+import { pokemonAPI } from '../../services/pokemonAPI';
 import toast from 'react-hot-toast';
 
 function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false }) {
@@ -27,7 +27,7 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     };
 
     const [formData, setFormData] = useState(initialFormState);
-    const supportedLanguages = PokemonAPI.getSupportedLanguages();
+    const supportedLanguages = pokemonAPI.getSupportedLanguages();
 
     // Reset form quando il modal si chiude - Usa il tuo pattern
     useEffect(() => {
@@ -49,7 +49,7 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     const loadAvailableSets = async () => {
         setLoadingSets(true);
         try {
-            const setsResponse = await PokemonAPI.getSetsByLanguage(formData.language);
+            const setsResponse = await pokemonAPI.getSetsByLanguage(formData.language);
 
             if (setsResponse.data) {
                 // Ordina i set per data di rilascio (più recenti prima)
@@ -109,13 +109,14 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     };
 
     // ✅ CREA COLLEZIONE BASE
+    // Nel tuo CreateCollectionModal.jsx, modifica la funzione createBaseCollection:
+
     const createBaseCollection = async () => {
         try {
             // 1. Ottieni dettagli completi del set
             let setData = await collectionsService.getSetFromCache(formData.selectedSet.id);
             if (!setData) {
-                // Se non in cache, ottieni dall'API
-                const setResponse = await PokemonAPI.getSetsByLanguage(formData.language);
+                const setResponse = await pokemonAPI.getSetsByLanguage(formData.language);
                 setData = setResponse.data.find(s => s.id === formData.selectedSet.id);
 
                 if (!setData) {
@@ -123,17 +124,31 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                 }
             }
 
-            // 2. Ottieni tutte le carte del set
-            const cardsResponse = await PokemonAPI.getCardsBySet(
+            // 2. ✅ IMPORTANTE: Ottieni tutte le carte del set con immagini
+            console.log('🔍 Loading cards for set:', formData.selectedSet.id);
+            const cardsResponse = await pokemonAPI.getCardsBySet(
                 formData.selectedSet.id,
-                formData.language
+                formData.language,
+                1,
+                500
             );
 
             if (!cardsResponse.data || cardsResponse.data.length === 0) {
                 throw new Error('Carte del set non trovate');
             }
 
-            // 3. Prepara dati collezione con il tuo formato
+            console.log(`✅ Loaded ${cardsResponse.data.length} cards with images`);
+
+            // 3. ✅ Assicurati che le carte abbiano le immagini
+            const cardsWithImages = cardsResponse.data.map(card => ({
+                ...card,
+                images: card.images || {
+                    small: card.image,
+                    large: card.image
+                }
+            }));
+
+            // 4. Prepara dati collezione
             const collectionData = {
                 name: formData.name,
                 description: formData.description,
@@ -149,27 +164,28 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                 }
             };
 
-            // 4. Usa il tuo servizio per creare la collezione
+            // 5. ✅ Usa le carte con immagini
             const result = await collectionsService.createBaseCollection(
                 collectionData,
                 setData,
-                cardsResponse.data,
+                cardsWithImages, // ✅ Passa le carte con immagini
                 formData.isComplete
             );
 
             if (result.success) {
                 toast.success(`Collezione "${formData.name}" creata con successo! 🎉`);
-                onSubmit?.(); // Trigger refresh nella parent page
+                onSubmit?.();
                 handleClose();
             } else {
                 throw new Error(result.error);
             }
 
         } catch (error) {
-            console.error('❌ Errore nel creare una collezione base:', error);
+            console.error('❌ Error creating base collection:', error);
             toast.error(`Errore: ${error.message}`);
         }
     };
+
 
     // ✅ CHIUDI MODALE - Reset completo
     const handleClose = () => {
@@ -209,8 +225,8 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                             <div
                                 key={s}
                                 className={`flex-1 h-2 rounded-full transition-all duration-300 ${s <= step
-                                        ? 'bg-gradient-to-r from-purple-500/60 to-pink-500/60'
-                                        : 'bg-white/10'
+                                    ? 'bg-gradient-to-r from-purple-500/60 to-pink-500/60'
+                                    : 'bg-white/10'
                                     }`}
                             />
                         ))}

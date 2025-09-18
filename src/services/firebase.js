@@ -61,10 +61,14 @@ export const collectionsService = {
     },
 
     // ✅ MANTIENI - Funzione per collezioni base
+    // Nel tuo CreateCollectionModal.jsx, modifica la funzione createBaseCollection:
+
     async createBaseCollection(collectionData, setData, setCards, isComplete = false) {
         const batch = writeBatch(db);
 
         try {
+            console.log(`🔥 Creating collection with ${setCards.length} cards...`);
+
             const collectionRef = doc(collection(db, 'collections'));
             const collectionId = collectionRef.id;
 
@@ -80,18 +84,61 @@ export const collectionsService = {
                 updatedAt: serverTimestamp()
             });
 
+            // Cache del set
             const setRef = doc(db, 'sets', setData.id);
             batch.set(setRef, setData, { merge: true });
 
-            setCards.forEach(card => {
+            // ✅ IMPORTANTE: Salva le carte CON le immagini
+            setCards.forEach((card, index) => {
                 const cardRef = doc(db, 'cards', card.id);
-                batch.set(cardRef, {
-                    ...card,
+
+                // ✅ FUNZIONE HELPER per rimuovere undefined
+                const cleanData = (obj) => {
+                    const cleaned = {};
+                    for (const [key, value] of Object.entries(obj)) {
+                        if (value !== undefined && value !== null) {
+                            if (typeof value === 'object' && !Array.isArray(value)) {
+                                // Ricorsivo per oggetti nested
+                                const cleanedNested = cleanData(value);
+                                if (Object.keys(cleanedNested).length > 0) {
+                                    cleaned[key] = cleanedNested;
+                                }
+                            } else {
+                                cleaned[key] = value;
+                            }
+                        }
+                    }
+                    return cleaned;
+                };
+
+                // ✅ DATI CARTA PULITI
+                const cleanCardData = cleanData({
+                    id: card.id,
+                    name: card.name || 'Unknown',
+                    number: card.localId || card.number || (index + 1).toString(),
+                    rarity: card.rarity || 'Unknown', // ✅ Default per rarity undefined
                     setId: setData.id,
-                    language: collectionData.language
-                }, { merge: true });
+                    language: collectionData.language,
+                    images: {
+                        small: card.image || card.images?.small || null,
+                        large: card.image || card.images?.large || card.images?.small || null
+                    },
+                    types: card.types || [],
+                    hp: card.hp || null,
+                    set: {
+                        id: setData.id,
+                        name: setData.name
+                    }
+                });
+
+                batch.set(cardRef, cleanCardData, { merge: true });
+
+                if (index % 10 === 0) {
+                    console.log(`💾 Processed card ${index + 1}/${setCards.length}: ${card.name}`);
+                }
             });
 
+            // Ownership records
             setCards.forEach(card => {
                 const ownershipRef = doc(
                     db,
@@ -107,7 +154,10 @@ export const collectionsService = {
                 });
             });
 
+            console.log('🔥 Committing batch operation...');
             await batch.commit();
+            console.log('✅ Collection created successfully!');
+
             return { success: true, collectionId };
 
         } catch (error) {

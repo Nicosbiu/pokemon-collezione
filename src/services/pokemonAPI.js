@@ -60,6 +60,88 @@ export class PokemonAPI {
         }
     }
 
+    // ✅ NUOVA: Ottieni singola carta per ID
+    static async getCardById(cardId, language = 'en') {
+        try {
+            const cacheKey = `card_${cardId}_${language}`;
+
+            // Controlla cache prima
+            const cached = cache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+                return cached.data;
+            }
+
+            console.log(`🔍 Fetching card ${cardId} in ${language}...`);
+
+            const tcgdx = this.getClient(language);
+            const card = await tcgdx.fetch('cards', cardId);
+
+            if (card) {
+                // Salva in cache
+                cache.set(cacheKey, {
+                    data: card,
+                    timestamp: Date.now()
+                });
+            }
+
+            return card;
+        } catch (error) {
+            console.error(`❌ Error fetching card ${cardId}:`, error);
+            return null;
+        }
+    }
+
+    // ✅ OTTIENI CARTE PER SET - SINTASSI CORRETTA
+    static async getCardsBySet(setId, language = 'en', page = 1, pageSize = 250) { // ✅ Aumenta pageSize
+        try {
+            const tcgdex = new TCGdex(language);
+
+            // ✅ USA fetch per ottenere il set e le sue carte
+            const set = await tcgdex.fetch('sets', setId);
+
+            // Le carte sono già incluse nel set
+            let cards = set?.cards || [];
+
+            // ✅ IMPORTANTE: Assicurati che le carte abbiano le immagini
+            cards = cards.map(card => ({
+                ...card,
+                images: card.image ? {
+                    small: card.image,
+                    large: card.image
+                } : null,
+                setId: setId
+            }));
+
+            // Paginazione manuale
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const paginatedCards = cards.slice(startIndex, endIndex);
+
+            return {
+                data: paginatedCards,
+                total: cards.length,
+                page: page,
+                pageSize: pageSize,
+                totalPages: Math.ceil(cards.length / pageSize),
+                language: language,
+                setId: setId,
+                source: 'tcgdex.net'
+            };
+
+        } catch (error) {
+            console.error('❌ Error in getCardsBySet:', error);
+            return {
+                data: [],
+                total: 0,
+                page: page,
+                language: language,
+                setId: setId,
+                error: error.message,
+                source: 'tcgdex.net'
+            };
+        }
+    }
+
     // ✅ OTTIENI TUTTI I SET - METODO CORRETTO
     static async getSetsByLanguage(language = 'en') {
         try {
@@ -80,46 +162,6 @@ export class PokemonAPI {
                 data: [],
                 total: 0,
                 language: language,
-                error: error.message,
-                source: 'tcgdex.net'
-            };
-        }
-    }
-
-    // ✅ OTTIENI CARTE PER SET - SINTASSI CORRETTA
-    static async getCardsBySet(setId, language = 'en', page = 1, pageSize = 12) {
-        try {
-            const tcgdex = new TCGdex(language);
-
-            // ✅ USA fetch per ottenere il set e le sue carte
-            const set = await tcgdex.fetch('sets', setId);
-
-            // Le carte sono già incluse nel set
-            const cards = set?.cards || [];
-
-            // Paginazione manuale
-            const startIndex = (page - 1) * pageSize;
-            const endIndex = startIndex + pageSize;
-            const paginatedCards = cards.slice(startIndex, endIndex);
-
-            return {
-                data: paginatedCards,
-                total: cards.length,
-                page: page,
-                pageSize: pageSize,
-                totalPages: Math.ceil(cards.length / pageSize),
-                language: language,
-                setId: setId,
-                source: 'tcgdex.net'
-            };
-
-        } catch (error) {
-            return {
-                data: [],
-                total: 0,
-                page: page,
-                language: language,
-                setId: setId,
                 error: error.message,
                 source: 'tcgdex.net'
             };
