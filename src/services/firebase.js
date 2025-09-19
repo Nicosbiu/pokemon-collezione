@@ -12,11 +12,11 @@ import {
     where,
     updateDoc,
     deleteDoc,
-    setDoc,
-    writeBatch,
     serverTimestamp,
-    orderBy,
-    Timestamp
+    writeBatch,
+    setDoc,
+    getDoc,
+    increment
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -28,18 +28,14 @@ const firebaseConfig = {
     appId: "1:935678885059:web:c7b8fa1a5d7dc648287676"
 };
 
-// ✅ Inizializza Firebase PRIMA di esportare
 const app = initializeApp(firebaseConfig);
-
-// ✅ Esporta le istanze, non le funzioni
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export { signOut };
 
-// ✅ FUNZIONI PER GESTIRE LE COLLEZIONI
 export const collectionsService = {
 
-    // ✅ CREA COLLEZIONE (con supporto per wizard)
+    // ✅ MANTIENI - Funzione originale
     async createCollection(collectionData, userId) {
         try {
             console.log('🔧 Creating collection:', collectionData);
@@ -47,15 +43,8 @@ export const collectionsService = {
             const docRef = await addDoc(collection(db, 'collections'), {
                 name: collectionData.name,
                 description: collectionData.description || '',
-                gameId: collectionData.gameId || 'pokemon',
+                gameId: collectionData.gameId,
                 language: collectionData.language || 'it',
-
-                // ✅ Dati wizard specifici
-                type: collectionData.type || 'standard', // standard | personalizzata
-                setId: collectionData.setId || null,      // ID set se standard
-                setName: collectionData.setName || null,  // Nome set se standard
-
-                // ✅ Proprietario e membri
                 ownerId: userId,
                 ownerName: collectionData.ownerName || 'Unknown',
                 members: {
@@ -80,8 +69,6 @@ export const collectionsService = {
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
-
-            console.log('✅ Collection created with ID:', docRef.id);
             return docRef.id;
 
         } catch (error) {
@@ -90,63 +77,113 @@ export const collectionsService = {
         }
     },
 
-    // ✅ OTTIENI COLLEZIONI UTENTE (ordinati per data creazione)
-    async getUserCollections(userId) {
+    // ✅ MANTIENI - Funzione per collezioni base
+    // Nel tuo CreateCollectionModal.jsx, modifica la funzione createBaseCollection:
+
+    async createBaseCollection(collectionData, setData, setCards, isComplete = false) {
+        const batch = writeBatch(db);
+
         try {
-            const q = query(
-                collection(db, 'collections'),
-                where(`members.${userId}`, '!=', null),
-                orderBy('createdAt', 'desc')
-            );
+            console.log(`🔥 Creating collection with ${setCards.length} cards...`);
 
-            const querySnapshot = await getDocs(q);
-            const collections = [];
+            const collectionRef = doc(collection(db, 'collections'));
+            const collectionId = collectionRef.id;
 
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                collections.push({
-                    id: doc.id,
-                    ...data,
-                    // ✅ Converti Timestamp in Date per compatibilità
-                    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-                    updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
+            batch.set(collectionRef, {
+                ...collectionData,
+                id: collectionId,
+                type: 'base',
+                setId: setData.id,
+                setName: setData.name,
+                totalCards: setCards.length,
+                ownedCards: isComplete ? setCards.length : 0,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+
+            // Cache del set
+            const setRef = doc(db, 'sets', setData.id);
+            batch.set(setRef, setData, { merge: true });
+
+            // ✅ IMPORTANTE: Salva le carte CON le immagini
+            setCards.forEach((card, index) => {
+                const cardRef = doc(db, 'cards', card.id);
+
+                // ✅ FUNZIONE HELPER per rimuovere undefined
+                const cleanData = (obj) => {
+                    const cleaned = {};
+                    for (const [key, value] of Object.entries(obj)) {
+                        if (value !== undefined && value !== null) {
+                            if (typeof value === 'object' && !Array.isArray(value)) {
+                                // Ricorsivo per oggetti nested
+                                const cleanedNested = cleanData(value);
+                                if (Object.keys(cleanedNested).length > 0) {
+                                    cleaned[key] = cleanedNested;
+                                }
+                            } else {
+                                cleaned[key] = value;
+                            }
+                        }
+                    }
+                    return cleaned;
+                };
+
+                // ✅ DATI CARTA PULITI
+                const cleanCardData = cleanData({
+                    id: card.id,
+                    name: card.name || 'Unknown',
+                    number: card.localId || card.number || (index + 1).toString(),
+                    rarity: card.rarity || 'Unknown', // ✅ Default per rarity undefined
+                    setId: setData.id,
+                    language: collectionData.language,
+                    images: {
+                        small: card.image || card.images?.small || null,
+                        large: card.image || card.images?.large || card.images?.small || null
+                    },
+                    types: card.types || [],
+                    hp: card.hp || null,
+                    set: {
+                        id: setData.id,
+                        name: setData.name
+                    }
+                });
+
+                batch.set(cardRef, cleanCardData, { merge: true });
+
+                if (index % 10 === 0) {
+                    console.log(`💾 Processed card ${index + 1}/${setCards.length}: ${card.name}`);
+                }
+            });
+
+            // Ownership records
+            setCards.forEach(card => {
+                const ownershipRef = doc(
+                    db,
+                    'ownership',
+                    `${collectionData.ownerId}_${collectionId}_${card.id}`
+                );
+                batch.set(ownershipRef, {
+                    userId: collectionData.ownerId,
+                    collectionId: collectionId,
+                    cardId: card.id,
+                    owned: isComplete,
+                    addedAt: serverTimestamp()
                 });
             });
 
-            console.log(`✅ Loaded ${collections.length} collections for user ${userId}`);
-            return collections;
+            console.log('🔥 Committing batch operation...');
+            await batch.commit();
+            console.log('✅ Collection created successfully!');
+
+            return { success: true, collectionId };
 
         } catch (error) {
-            console.error('❌ Error fetching user collections:', error);
-            throw error;
+            console.error('❌ Error creating base collection:', error);
+            return { success: false, error: error.message };
         }
     },
 
-    // ✅ OTTIENI SINGOLA COLLEZIONE
-    async getCollection(collectionId) {
-        try {
-            const docRef = doc(db, 'collections', collectionId);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                return {
-                    id: docSnap.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-                    updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
-                };
-            } else {
-                throw new Error('Collection not found');
-            }
-
-        } catch (error) {
-            console.error('❌ Error fetching collection:', error);
-            throw error;
-        }
-    },
-
-    // ✅ AGGIORNA COLLEZIONE
+    // ✅ MANTIENI le altre funzioni esistenti
     async updateCollection(collectionId, updateData) {
         try {
             const docRef = doc(db, 'collections', collectionId);
@@ -165,8 +202,6 @@ export const collectionsService = {
                 ...updateData,
                 updatedAt: serverTimestamp()
             });
-
-            console.log('✅ Collection updated:', collectionId);
             return true;
 
         } catch (error) {
@@ -175,27 +210,9 @@ export const collectionsService = {
         }
     },
 
-    // ✅ ELIMINA COLLEZIONE (con tutte le carte)
     async deleteCollection(collectionId) {
         try {
-            // ✅ Prima elimina tutte le carte nella subcollection
-            const cardsQuery = query(collection(db, 'collections', collectionId, 'cards'));
-            const cardsSnapshot = await getDocs(cardsQuery);
-
-            const batch = writeBatch(db);
-
-            // Elimina tutte le carte
-            cardsSnapshot.forEach((cardDoc) => {
-                batch.delete(cardDoc.ref);
-            });
-
-            // Elimina la collezione
-            const collectionRef = doc(db, 'collections', collectionId);
-            batch.delete(collectionRef);
-
-            await batch.commit();
-
-            console.log('✅ Collection and all cards deleted:', collectionId);
+            await deleteDoc(doc(db, 'collections', collectionId));
             return true;
 
         } catch (error) {
@@ -204,146 +221,183 @@ export const collectionsService = {
         }
     },
 
-    // ✅ AGGIUNGI CARTA ALLA COLLEZIONE
+    async getUserCollections(userId) {
+        try {
+            const q = query(
+                collection(db, 'collections'),
+                where(`members.${userId}`, '!=', null)
+            );
+
+            const querySnapshot = await getDocs(q);
+            const collections = [];
+
+            querySnapshot.forEach((doc) => {
+                collections.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            return collections;
+        } catch (error) {
+            console.error('❌ Error fetching collections:', error);
+            throw error;
+        }
+    },
+
+    // ✅ CORREZIONE - Risolve il conflitto di nomi
+    async getCollectionById(collectionId) {
+        try {
+            const docRef = doc(db, 'collections', collectionId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Error getting collection:', error);
+            throw error;
+        }
+    },
+
+    // ✅ CORREZIONE - Risolve il conflitto di nomi 
+    async getCollectionCards(collectionId) {
+        try {
+            // Prima ottieni i dati della collezione
+            const collectionData = await this.getCollectionById(collectionId);
+            if (!collectionData) return [];
+
+            if (collectionData.type === 'base' && collectionData.setId) {
+                // ✅ FIX: Usa query per ottenere carte del set dalla cache
+                const cardsQuery = query(
+                    collection(db, 'cards'), // ✅ QUESTO È OK - usa la funzione collection()
+                    where('setId', '==', collectionData.setId)
+                );
+                const querySnapshot = await getDocs(cardsQuery);
+
+                return querySnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((a, b) => {
+                        const aNum = parseInt(a.number) || 0;
+                        const bNum = parseInt(b.number) || 0;
+                        return aNum - bNum;
+                    });
+            }
+
+            return [];
+        } catch (error) {
+            console.error('❌ Error getting collection cards:', error);
+            throw error;
+        }
+    },
+
+    // ✅ CORREZIONE - Risolve il conflitto di nomi
+    async getUserOwnership(userId, collectionId) {
+        try {
+            const ownershipQuery = query(
+                collection(db, 'ownership'), // ✅ QUESTO È OK - usa la funzione collection()
+                where('userId', '==', userId),
+                where('collectionId', '==', collectionId),
+                where('owned', '==', true)
+            );
+
+            const querySnapshot = await getDocs(ownershipQuery);
+            return querySnapshot.docs.map(doc => doc.data().cardId);
+        } catch (error) {
+            console.error('❌ Error getting user ownership:', error);
+            throw error;
+        }
+    },
+
+    // ✅ MANTIENI - Aggiorna ownership
+    async updateCardOwnership(userId, collectionId, cardId, owned) {
+        try {
+            console.log('🔥 Updating ownership:', { userId, collectionId, cardId, owned }); // Debug
+
+            const ownershipId = `${userId}_${collectionId}_${cardId}`;
+            const ownershipRef = doc(db, 'ownership', ownershipId);
+
+            // ✅ USA setDoc con merge invece di updateDoc
+            await setDoc(ownershipRef, {
+                userId,
+                collectionId,
+                cardId,
+                owned,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            console.log('✅ Ownership updated successfully'); // Debug
+
+            // Aggiorna contatore collezione
+            const collectionRef = doc(db, 'collections', collectionId);
+            if (owned) {
+                await updateDoc(collectionRef, {
+                    ownedCards: increment(1),
+                    updatedAt: serverTimestamp()
+                });
+            } else {
+                await updateDoc(collectionRef, {
+                    ownedCards: increment(-1),
+                    updatedAt: serverTimestamp()
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Error updating card ownership:', error);
+            throw error; // Re-throw per gestione nell'UI
+        }
+    },
+
+    // ✅ MANTIENI - Helper cache set
+    async getSetFromCache(setId) {
+        try {
+            const setDoc = await getDoc(doc(db, 'sets', setId));
+            return setDoc.exists() ? { id: setDoc.id, ...setDoc.data() } : null;
+        } catch (error) {
+            console.error('❌ Error getting set from cache:', error);
+            return null;
+        }
+    },
+
+    // ✅ MANTIENI - Helper contatori
+    async incrementOwnedCards(collectionId) {
+        const collectionRef = doc(db, 'collections', collectionId);
+        await updateDoc(collectionRef, {
+            ownedCards: increment(1),
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    async decrementOwnedCards(collectionId) {
+        const collectionRef = doc(db, 'collections', collectionId);
+        await updateDoc(collectionRef, {
+            ownedCards: increment(-1),
+            updatedAt: serverTimestamp()
+        });
+    },
+
+    // ✅ MANTIENI - Aggiungi carta
     async addCardToCollection(collectionId, cardData, language) {
         try {
             const cardRef = doc(db, 'collections', collectionId, 'cards', cardData.id);
             await setDoc(cardRef, {
                 cardId: cardData.id,
                 name: cardData.name,
-                setId: cardData.set?.id || null,
-                setName: cardData.set?.name || null,
+                setId: cardData.set?.id,
                 language: language,
-                rarity: cardData.rarity || null,
-                number: cardData.number || cardData.cardNumber || null,
-                imageUrl: cardData.images?.small || cardData.image || null,
+                imageUrl: cardData.image,
                 owned: true,
                 quantity: 1,
                 condition: 'mint',
                 notes: '',
                 addedAt: serverTimestamp()
             });
-
-            // ✅ Aggiorna stats collezione
-            await this.updateCollectionStats(collectionId);
-
-            console.log('✅ Card added to collection:', cardData.name);
             return true;
 
         } catch (error) {
             console.error('❌ Error adding card to collection:', error);
             throw error;
         }
-    },
-
-    // ✅ RIMUOVI CARTA DALLA COLLEZIONE
-    async removeCardFromCollection(collectionId, cardId) {
-        try {
-            const cardRef = doc(db, 'collections', collectionId, 'cards', cardId);
-            await deleteDoc(cardRef);
-
-            // ✅ Aggiorna stats collezione
-            await this.updateCollectionStats(collectionId);
-
-            console.log('✅ Card removed from collection:', cardId);
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error removing card from collection:', error);
-            throw error;
-        }
-    },
-
-    // ✅ OTTIENI CARTE DI UNA COLLEZIONE
-    async getCollectionCards(collectionId) {
-        try {
-            const cardsQuery = query(
-                collection(db, 'collections', collectionId, 'cards'),
-                orderBy('addedAt', 'desc')
-            );
-
-            const snapshot = await getDocs(cardsQuery);
-            const cards = [];
-
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                cards.push({
-                    id: doc.id,
-                    ...data,
-                    addedAt: data.addedAt?.toDate ? data.addedAt.toDate() : data.addedAt
-                });
-            });
-
-            return cards;
-
-        } catch (error) {
-            console.error('❌ Error fetching collection cards:', error);
-            throw error;
-        }
-    },
-
-    // ✅ AGGIORNA STATISTICHE COLLEZIONE
-    async updateCollectionStats(collectionId) {
-        try {
-            const cards = await this.getCollectionCards(collectionId);
-            const ownedCards = cards.filter(card => card.owned).length;
-            const totalCards = cards.length;
-
-            await this.updateCollection(collectionId, {
-                stats: {
-                    totalCards,
-                    ownedCards,
-                    completionPercentage: totalCards > 0 ? Math.round((ownedCards / totalCards) * 100) : 0
-                }
-            });
-
-            return { totalCards, ownedCards };
-
-        } catch (error) {
-            console.error('❌ Error updating collection stats:', error);
-            throw error;
-        }
-    },
-
-    // ✅ BATCH INSERT CARTE (per wizard)
-    async batchInsertCards(collectionId, cards, language, owned = true) {
-        try {
-            console.log(`🔧 Batch inserting ${cards.length} cards to collection ${collectionId}`);
-
-            const batch = writeBatch(db);
-            const cardsCollectionRef = collection(db, 'collections', collectionId, 'cards');
-
-            cards.forEach(card => {
-                const cardRef = doc(cardsCollectionRef, card.id);
-                batch.set(cardRef, {
-                    cardId: card.id,
-                    name: card.name,
-                    setId: card.set?.id || null,
-                    setName: card.set?.name || null,
-                    language: language,
-                    rarity: card.rarity || null,
-                    number: card.number || card.cardNumber || null,
-                    imageUrl: card.images?.small || card.image || null,
-                    owned: owned,
-                    quantity: owned ? 1 : 0,
-                    condition: owned ? 'mint' : null,
-                    notes: '',
-                    addedAt: serverTimestamp()
-                });
-            });
-
-            await batch.commit();
-
-            // ✅ Aggiorna stats collezione
-            await this.updateCollectionStats(collectionId);
-
-            console.log('✅ Batch insert completed');
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error in batch insert:', error);
-            throw error;
-        }
     }
 };
-

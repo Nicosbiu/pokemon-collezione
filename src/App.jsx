@@ -1,4 +1,4 @@
-// src/App.jsx - Aggiungi route per collezione singola
+// src/App.jsx - Aggiungi la nuova route
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import RequireAuth from './components/RequireAuth';
@@ -7,8 +7,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CollectionsPage from './pages/CollectionsPage';
-import CollectionDetailPage from './pages/CollectionDetailPage';
-import { Toaster } from 'react-hot-toast';
+import CollectionViewPage from './pages/CollectionViewPage'; // ✅ NUOVO IMPORT
 
 function App() {
   return (
@@ -24,10 +23,10 @@ function App() {
               <CollectionsPage />
             </RequireAuth>
           } />
-          {/* ✅ NUOVA ROUTE PER COLLEZIONE SINGOLA */}
-          <Route path="/collections/:collectionId" element={
+          {/* ✅ NUOVA ROUTE PER BINDER */}
+          <Route path="/collection/:id" element={
             <RequireAuth>
-              <CollectionDetailPage />
+              <CollectionViewPage />
             </RequireAuth>
           } />
         </Routes>

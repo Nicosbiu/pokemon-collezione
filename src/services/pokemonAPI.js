@@ -60,6 +60,125 @@ export class PokemonAPI {
         }
     }
 
+    // ✅ NUOVA: Ottieni singola carta per ID
+    static async getCardById(cardId, language = 'en') {
+        try {
+            const cacheKey = `card_${cardId}_${language}`;
+
+            // Controlla cache prima
+            const cached = cache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+                return cached.data;
+            }
+
+            console.log(`🔍 Fetching card ${cardId} in ${language}...`);
+
+            const tcgdx = this.getClient(language);
+            const card = await tcgdx.fetch('cards', cardId);
+
+            if (card) {
+                // Salva in cache
+                cache.set(cacheKey, {
+                    data: card,
+                    timestamp: Date.now()
+                });
+            }
+
+            return card;
+        } catch (error) {
+            console.error(`❌ Error fetching card ${cardId}:`, error);
+            return null;
+        }
+    }
+
+    // ✅ OTTIENI CARTE PER SET - SINTASSI CORRETTA
+    static async getCardsBySet(setId, language = 'en', page = 1, pageSize = 250) {
+        try {
+            console.log(`🔍 Fetching cards for set ${setId} in ${language}...`);
+
+            const tcgdx = this.getClient(language);
+            const set = await tcgdx.fetch('sets', setId);
+
+            if (!set || !set.cards) {
+                throw new Error(`Set ${setId} not found or has no cards`);
+            }
+
+            // ✅ HELPER: Costruisci URL immagine secondo documentazione TCGdx
+            const buildTCGdxImageUrl = (baseImageUrl) => {
+                if (!baseImageUrl) return null;
+
+                // Se l'URL ha già un'estensione, usala così com'è
+                if (baseImageUrl.includes('.png') || baseImageUrl.includes('.jpg') || baseImageUrl.includes('.webp')) {
+                    return baseImageUrl;
+                }
+
+                // ✅ FORMATO CORRETTO secondo documentazione TCGdx
+                // {base_url}/{quality}.{extension}
+                return {
+                    small: `${baseImageUrl}/low.webp`,    // 245x337 per thumbnail
+                    large: `${baseImageUrl}/high.webp`    // 600x825 per visualizzazione
+                };
+            };
+
+            // ✅ MAPPA LE CARTE CON IMMAGINI CORRETTE
+            const cardsWithImages = set.cards.map(card => {
+                const imageUrls = buildTCGdxImageUrl(card.image);
+
+                return {
+                    id: card.id,
+                    name: card.name || 'Unknown',
+                    number: card.localId || card.number || '1',
+                    rarity: card.rarity || 'Common',
+                    types: card.types || [],
+                    hp: card.hp || null,
+                    setId: setId,
+                    // ✅ IMMAGINI CON FORMATO CORRETTO
+                    images: imageUrls || {
+                        small: null,
+                        large: null
+                    },
+                    set: {
+                        id: setId,
+                        name: set.name || 'Unknown Set'
+                    }
+                };
+            }).filter(card => card.id && card.images && card.images.small); // ✅ Filtra carte senza immagini
+
+            // Paginazione
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const paginatedCards = cardsWithImages.slice(startIndex, endIndex);
+
+            console.log(`✅ Processed ${paginatedCards.length} cards with images`);
+            console.log('📷 Sample image URLs:');
+            console.log('  Small:', paginatedCards[0]?.images?.small);
+            console.log('  Large:', paginatedCards[0]?.images?.large);
+
+            return {
+                data: paginatedCards,
+                total: cardsWithImages.length,
+                page: page,
+                pageSize: pageSize,
+                totalPages: Math.ceil(cardsWithImages.length / pageSize),
+                language: language,
+                setId: setId,
+                source: 'tcgdx'
+            };
+
+        } catch (error) {
+            console.error(`❌ Error in PokemonAPI.getCardsBySet for ${setId}:`, error);
+            return {
+                data: [],
+                total: 0,
+                page: page,
+                language: language,
+                setId: setId,
+                error: error.message,
+                source: 'tcgdx'
+            };
+        }
+    }
+
     // ✅ OTTIENI TUTTI I SET - METODO CORRETTO
     static async getSetsByLanguage(language = 'en') {
         try {
@@ -80,46 +199,6 @@ export class PokemonAPI {
                 data: [],
                 total: 0,
                 language: language,
-                error: error.message,
-                source: 'tcgdex.net'
-            };
-        }
-    }
-
-    // ✅ OTTIENI CARTE PER SET - SINTASSI CORRETTA
-    static async getCardsBySet(setId, language = 'en', page = 1, pageSize = 12) {
-        try {
-            const tcgdex = new TCGdex(language);
-
-            // ✅ USA fetch per ottenere il set e le sue carte
-            const set = await tcgdex.fetch('sets', setId);
-
-            // Le carte sono già incluse nel set
-            const cards = set?.cards || [];
-
-            // Paginazione manuale
-            const startIndex = (page - 1) * pageSize;
-            const endIndex = startIndex + pageSize;
-            const paginatedCards = cards.slice(startIndex, endIndex);
-
-            return {
-                data: paginatedCards,
-                total: cards.length,
-                page: page,
-                pageSize: pageSize,
-                totalPages: Math.ceil(cards.length / pageSize),
-                language: language,
-                setId: setId,
-                source: 'tcgdex.net'
-            };
-
-        } catch (error) {
-            return {
-                data: [],
-                total: 0,
-                page: page,
-                language: language,
-                setId: setId,
                 error: error.message,
                 source: 'tcgdex.net'
             };
