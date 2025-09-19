@@ -7,7 +7,6 @@ import {
     addDoc,
     doc,
     getDocs,
-    getDoc,
     query,
     where,
     updateDoc,
@@ -38,15 +37,12 @@ export const collectionsService = {
     // ✅ MANTIENI - Funzione originale
     async createCollection(collectionData, userId) {
         try {
-            console.log('🔧 Creating collection:', collectionData);
-
             const docRef = await addDoc(collection(db, 'collections'), {
                 name: collectionData.name,
                 description: collectionData.description || '',
                 gameId: collectionData.gameId,
                 language: collectionData.language || 'it',
                 ownerId: userId,
-                ownerName: collectionData.ownerName || 'Unknown',
                 members: {
                     [userId]: {
                         role: 'owner',
@@ -54,23 +50,10 @@ export const collectionsService = {
                         joinedAt: serverTimestamp()
                     }
                 },
-
-                // ✅ Visibilità e permessi
-                visibility: collectionData.visibility || 'public', // public | private | friends
-
-                // ✅ Statistiche iniziali
-                stats: {
-                    totalCards: collectionData.totalCards || 0,
-                    ownedCards: collectionData.ownedCards || 0,
-                    completionPercentage: 0
-                },
-
-                // ✅ Timestamp
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
             return docRef.id;
-
         } catch (error) {
             console.error('❌ Error creating collection:', error);
             throw error;
@@ -187,23 +170,11 @@ export const collectionsService = {
     async updateCollection(collectionId, updateData) {
         try {
             const docRef = doc(db, 'collections', collectionId);
-
-            // ✅ Aggiorna stats se fornite
-            if (updateData.stats) {
-                updateData.stats = {
-                    ...updateData.stats,
-                    completionPercentage: updateData.stats.totalCards > 0
-                        ? Math.round((updateData.stats.ownedCards / updateData.stats.totalCards) * 100)
-                        : 0
-                };
-            }
-
             await updateDoc(docRef, {
                 ...updateData,
                 updatedAt: serverTimestamp()
             });
             return true;
-
         } catch (error) {
             console.error('❌ Error updating collection:', error);
             throw error;
@@ -214,7 +185,6 @@ export const collectionsService = {
         try {
             await deleteDoc(doc(db, 'collections', collectionId));
             return true;
-
         } catch (error) {
             console.error('❌ Error deleting collection:', error);
             throw error;
@@ -389,12 +359,9 @@ export const collectionsService = {
                 imageUrl: cardData.image,
                 owned: true,
                 quantity: 1,
-                condition: 'mint',
-                notes: '',
                 addedAt: serverTimestamp()
             });
             return true;
-
         } catch (error) {
             console.error('❌ Error adding card to collection:', error);
             throw error;
