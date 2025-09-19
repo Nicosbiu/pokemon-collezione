@@ -1,262 +1,263 @@
-// src/pages/CollectionsPage.jsx
+// src/pages/CollectionViewPage.jsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { collectionsService } from '../services/firebase';
-import CreateCollectionModal from '../components/modals/CreateCollectionModal';
-import EditCollectionModal from '../components/modals/EditCollectionModal';
-import DeleteCollectionModal from '../components/modals/DeleteCollectionModal';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PokemonAPI } from '../services/pokemonAPI'; // ✅ AGGIUNGI per immagini API
+import { ArrowLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { HeartIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 
-// ✅ COMPONENTE COLLEZIONE CARD CON ACTION BUTTONS
-function CollectionCard({ collection, onEdit, onDelete }) {
-    const [isHovered, setIsHovered] = useState(false);
+// ✅ POKEMON CARD COMPONENT - Con immagini dall'API
+function PokemonCard({ card, isOwned, onToggleOwn }) {
+    const [imageLoading, setImageLoading] = useState(true);
+    const [imageError, setImageError] = useState(false);
+
+    const imageUrl = card.images?.small || card.images?.large || null;
 
     return (
-        <div
-            className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
-                 rounded-2xl p-6 hover:bg-white/10 hover:border-white/20 
-                 transition-all duration-300 cursor-pointer relative group"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
-            {/* Content */}
-            <h3 className="text-white text-lg font-semibold mb-2 pr-20">
-                {collection.name}
-            </h3>
-            <p className="text-white/70 text-sm mb-4 line-clamp-2">
-                {collection.description || 'No description provided.'}
-            </p>
-            <div className="flex justify-between items-center text-white/50 text-sm">
-                <span>0 cards</span>
-                <span className="capitalize">{collection.gameId} TCG</span>
+        <div className="group relative backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                       rounded-xl p-3 hover:bg-white/10 hover:border-white/20 
+                       transition-all duration-300 cursor-pointer">
+
+            <div className="relative mb-3 aspect-[2.5/3.5]">
+
+                {imageLoading && !imageError && imageUrl && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/10 rounded-lg 
+                                   animate-pulse flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white/40"></div>
+                    </div>
+                )}
+
+                {imageUrl && !imageError ? (
+                    <img
+                        src={imageUrl}
+                        alt={card.name}
+                        className={`w-full h-full object-cover rounded-lg shadow-lg transition-all duration-300
+                                  ${imageLoading ? 'opacity-0' : 'opacity-100'}
+                                  ${!isOwned ? 'grayscale-[60%] opacity-50' : ''}
+                                  hover:scale-105 hover:shadow-2xl`}
+                        loading="lazy"
+                        onLoad={() => setImageLoading(false)}
+                        onError={() => {
+                            setImageError(true);
+                            setImageLoading(false);
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-pink-900/20 
+                                   rounded-lg flex flex-col items-center justify-center text-white/60 
+                                   border border-white/5">
+                        <div className="text-4xl mb-2">🃏</div>
+                        <div className="text-xs text-center px-2 font-medium">{card.name}</div>
+                        <div className="text-xs text-white/40 mt-1">#{card.number}</div>
+                    </div>
+                )}
+
+                {/* ✅ TOGGLE BUTTON - Sempre visibile e funzionante */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('🔄 Toggling card:', card.id, 'from', isOwned, 'to', !isOwned); // Debug
+                        onToggleOwn(card.id);
+                    }}
+                    className={`absolute top-2 right-2 p-2 rounded-full backdrop-blur-sm 
+                              border-2 transition-all duration-200 
+                              ${isOwned
+                            ? 'bg-green-500/90 border-green-400/70 text-white shadow-lg shadow-green-500/25'
+                            : 'bg-black/70 border-white/30 text-white/70 hover:text-white hover:bg-black/90'
+                        }`}
+                >
+                    {isOwned ?
+                        <HeartSolidIcon className="w-4 h-4" /> :
+                        <HeartIcon className="w-4 h-4" />
+                    }
+                </button>
+
+                {!isOwned && (
+                    <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center 
+                                   opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <div className="text-white/90 text-sm font-medium bg-black/60 px-3 py-1 rounded-full">
+                            Non Posseduta
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* ✅ Floating Action Buttons - Appaiono al hover */}
-            <div className={`absolute top-4 right-4 flex gap-2 transition-all duration-300 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-                }`}>
-
-                {/* Edit Button */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(collection);
-                    }}
-                    className="p-2 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 
-                     text-blue-300 rounded-lg hover:bg-blue-500/30 hover:border-blue-400/50 
-                     hover:text-blue-200 transition-all duration-200 
-                     hover:shadow-lg hover:shadow-blue-500/25"
-                    title="Edit Collection"
-                >
-                    <PencilIcon className="w-4 h-4" />
-                </button>
-
-                {/* Delete Button */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(collection);
-                    }}
-                    className="p-2 backdrop-blur-xl bg-red-500/20 border border-red-400/30 
-                     text-red-300 rounded-lg hover:bg-red-500/30 hover:border-red-400/50 
-                     hover:text-red-200 transition-all duration-200 
-                     hover:shadow-lg hover:shadow-red-500/25"
-                    title="Delete Collection"
-                >
-                    <TrashIcon className="w-4 h-4" />
-                </button>
+            {/* ✅ INFO CARTA - Spazio corretto per lettere con discendenti (g, j, p, q, y) */}
+            <div className="text-center space-y-2">
+                <h3 className="text-white text-sm font-medium truncate leading-tight min-h-[1.2rem]"> {/* ✅ min-height fissa */}
+                    {card.name}
+                </h3>
+                <div className="flex justify-between items-center text-xs text-white/60 min-h-[1rem]"> {/* ✅ min-height per descrizione */}
+                    <span className="font-mono">#{card.number}</span>
+                    {card.rarity && (
+                        <span className="capitalize truncate ml-2">{card.rarity}</span>
+                    )}
+                </div>
             </div>
         </div>
     );
 }
 
-// ✅ COMPONENTE PRINCIPALE
-function CollectionsPage() {
-    const { currentUser, loading } = useAuth();
-    const [collections, setCollections] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+// ✅ MAIN COMPONENT - Resto uguale, solo cambiata la griglia
+function CollectionViewPage() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { currentUser } = useAuth();
 
-    // Stati per i modal
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [selectedCollection, setSelectedCollection] = useState(null);
+    // Stati - uguali a prima
+    const [collection, setCollection] = useState(null);
+    const [cards, setCards] = useState([]);
+    const [ownedCards, setOwnedCards] = useState(new Set());
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [showOnlyOwned, setShowOnlyOwned] = useState(false);
 
     // Funzioni - uguali a prima
     useEffect(() => {
         if (id && currentUser) {
             loadCollectionData();
         }
-    }, [currentUser]);
+    }, [id, currentUser]);
 
-    // ✅ CARICA COLLEZIONI
-    const loadCollections = async () => {
+    const loadCollectionData = async () => {
+        setLoading(true);
+        setError(null);
+
         try {
-            setIsLoading(true);
-            const userCollections = await collectionsService.getUserCollections(currentUser.uid);
-            setCollections(userCollections);
-            console.log('📚 Loaded collections:', userCollections);
+            const collectionData = await collectionsService.getCollectionById(id);
+            if (!collectionData) {
+                setError('Collezione non trovata');
+                return;
+            }
+
+            if (collectionData.ownerId !== currentUser.uid &&
+                !collectionData.members?.[currentUser.uid]) {
+                setError('Non hai i permessi per visualizzare questa collezione');
+                return;
+            }
+
+            setCollection(collectionData);
+
+            const collectionCards = await collectionsService.getCollectionCards(id);
+            setCards(collectionCards);
+
+            const userOwnership = await collectionsService.getUserOwnership(currentUser.uid, id);
+            setOwnedCards(new Set(userOwnership));
+
         } catch (error) {
-            console.error('❌ Error loading collections:', error);
-            toast.error('Failed to load collections');
+            console.error('❌ Error loading collection:', error);
+            setError('Errore nel caricamento della collezione');
+            toast.error('Errore nel caricamento della collezione');
         } finally {
             setLoading(false);
         }
     };
 
-    // ✅ CREA COLLEZIONE
-    const handleCreateCollection = async (collectionData) => {
+    const handleToggleCardOwnership = async (cardId) => {
         try {
-            setIsLoading(true);
-            await collectionsService.createCollection(collectionData, currentUser.uid);
-            await loadCollections();
-            setIsCreateModalOpen(false);
-            toast.success(`Collection "${collectionData.name}" created successfully! 🎉`);
+            const wasOwned = ownedCards.has(cardId);
+            console.log('🔄 Toggle attempt:', { cardId, wasOwned, newState: !wasOwned }); // Debug
+
+            // Optimistic update
+            const newOwnedCards = new Set(ownedCards);
+            if (wasOwned) {
+                newOwnedCards.delete(cardId);
+            } else {
+                newOwnedCards.add(cardId);
+            }
+            setOwnedCards(newOwnedCards);
+
+            // ✅ CHIAMATA DATABASE - Con retry logic
+            try {
+                await collectionsService.updateCardOwnership(
+                    currentUser.uid,
+                    id,
+                    cardId,
+                    !wasOwned
+                );
+
+                const card = cards.find(c => c.id === cardId);
+                toast.success(
+                    wasOwned
+                        ? `${card?.name} rimossa dalla collezione`
+                        : `${card?.name} aggiunta alla collezione! 🎉`
+                );
+
+            } catch (dbError) {
+                console.error('❌ Database error, reverting UI:', dbError);
+                // Revert optimistic update
+                setOwnedCards(ownedCards);
+                toast.error('Errore nel salvataggio. Riprova.');
+            }
+
         } catch (error) {
-            console.error('❌ Error creating collection:', error);
-            toast.error('Failed to create collection. Please try again.');
-        } finally {
-            setIsLoading(false);
+            console.error('❌ Error toggling card ownership:', error);
+            toast.error('Errore nell\'aggiornamento della carta');
+            // Force reload in case of persistent issues
+            setTimeout(() => {
+                loadCollectionData();
+            }, 1000);
         }
     };
 
-    // ✅ MODIFICA COLLEZIONE
-    const handleEditCollection = async (collectionId, updateData) => {
-        try {
-            setIsLoading(true);
-            await collectionsService.updateCollection(collectionId, updateData);
-            await loadCollections();
-            setIsEditModalOpen(false);
-            setSelectedCollection(null);
-            toast.success(`Collection "${updateData.name}" updated successfully! ✏️`);
-        } catch (error) {
-            console.error('❌ Error updating collection:', error);
-            toast.error('Failed to update collection. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const filteredCards = showOnlyOwned
+        ? cards.filter(card => ownedCards.has(card.id))
+        : cards;
 
-    // ✅ ELIMINA COLLEZIONE
-    const handleDeleteCollection = async (collectionId) => {
-        try {
-            setIsLoading(true);
-            await collectionsService.deleteCollection(collectionId);
-            await loadCollections();
-            setIsDeleteModalOpen(false);
-            setSelectedCollection(null);
-            toast.success('Collection deleted successfully! 🗑️');
-        } catch (error) {
-            console.error('❌ Error deleting collection:', error);
-            toast.error('Failed to delete collection. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // ✅ HANDLER PER APRIRE MODAL DI MODIFICA
-    const openEditModal = (collection) => {
-        setSelectedCollection(collection);
-        setIsEditModalOpen(true);
-    };
-
-    // ✅ HANDLER PER APRIRE MODAL DI ELIMINAZIONE
-    const openDeleteModal = (collection) => {
-        setSelectedCollection(collection);
-        setIsDeleteModalOpen(true);
-    };
+    const ownedCount = ownedCards.size;
+    const totalCount = cards.length;
+    const completionPercentage = totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0;
 
     // Loading e Error states - uguali a prima
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black 
-                      flex items-center justify-center">
-                <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
-                        rounded-2xl p-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 
-                          border-white mx-auto"></div>
-                    <p className="text-white/70 mt-4 text-center">Loading...</p>
+            <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-20 px-4">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center py-16">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/60 mx-auto mb-4"></div>
+                        <div className="text-white/60">Caricamento collezione...</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-32 px-4">
+                <div className="max-w-7xl mx-auto text-center py-16">
+                    <div className="text-red-400 text-lg mb-4">{error}</div>
+                    <button
+                        onClick={() => navigate('/collections')}
+                        className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 
+                                 border border-purple-400/30 text-white rounded-lg py-2 px-4 
+                                 hover:from-purple-500/40 hover:to-pink-500/40 
+                                 transition-all duration-200"
+                    >
+                        Torna alle Collezioni
+                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black 
-                    pt-32 p-8">
+        <div className="min-h-screen bg-gradient-to-br from-violet-900 to-black pt-32 px-4">
+            <div className="max-w-7xl mx-auto">
 
-            {/* ✅ HEADER */}
-            <div className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
-                      rounded-2xl p-8 mb-8">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                    <div>
-                        <h1 className="text-white text-3xl font-bold mb-2">
-                            Your Collections ⚡
-                        </h1>
-                        <p className="text-white/70">
-                            Welcome back, {currentUser?.email}! You have {collections.length} collection(s).
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        disabled={isLoading}
-                        className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 
-                                 border border-purple-400/30 text-white rounded-lg py-2 px-4 
-                                 hover:from-purple-500/40 hover:to-pink-500/40 
-                                 transition-all duration-200"
-                    >
-                        <PlusIcon className="w-5 h-5" />
-                        {isLoading ? 'Creating...' : 'New Collection'}
-                    </button>
-                </div>
-            </div>
-
-            {/* ✅ COLLECTIONS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {isLoading ? (
-                    // Loading skeleton
-                    [...Array(3)].map((_, i) => (
-                        <div key={i} className="backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
-                                    rounded-2xl p-6 animate-pulse">
-                            <div className="h-6 bg-white/10 rounded mb-2"></div>
-                            <div className="h-4 bg-white/10 rounded mb-4"></div>
-                            <div className="flex justify-between">
-                                <div className="h-4 bg-white/10 rounded w-16"></div>
-                                <div className="h-4 bg-white/10 rounded w-20"></div>
-                            </div>
-                        </div>
-                    ))
-                ) : collections.length > 0 ? (
-                    // ✅ Mostra collezioni reali con nuove card
-                    collections.map((collection) => (
-                        <CollectionCard
-                            key={collection.id}
-                            collection={collection}
-                            onEdit={openEditModal}
-                            onDelete={openDeleteModal}
-                        />
-                    ))
-                ) : (
-                    // ✅ Stato vuoto
-                    <div className="col-span-full backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
-                          rounded-2xl p-8 text-center">
-                        <p className="text-white/70 text-lg mb-4">
-                            📚 No collections yet
-                        </p>
-                        <p className="text-white/50 text-sm mb-6">
-                            Create your first collection to start organizing your cards!
-                        </p>
+                {/* Header e Stats - uguali a prima */}
+                <div className="mb-8">
+                    <div className="flex items-center gap-4 mb-6">
                         <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-gradient-to-r from-purple-500/30 to-pink-500/30 
-                         border border-purple-400/30 text-white rounded-lg py-3 px-6 
-                         hover:from-purple-500/40 hover:to-pink-500/40 
-                         hover:border-purple-400/50 transition-all duration-200
-                         inline-flex items-center gap-2"
+                            onClick={() => navigate('/collections')}
+                            className="p-2 backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
+                                     rounded-lg hover:bg-white/10 hover:border-white/20 
+                                     transition-all duration-200 text-white/70 hover:text-white"
                         >
-                            <PlusIcon className="w-5 h-5" />
-                            Create First Collection
+                            <ArrowLeftIcon className="w-5 h-5" />
                         </button>
 
                         <div>
@@ -345,38 +346,6 @@ function CollectionsPage() {
                     </div>
                 )}
             </div>
-
-            {/* ✅ MODAL CREATION */}
-            <CreateCollectionModal
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onSubmit={handleCreateCollection}
-                isLoading={isLoading}
-            />
-
-            {/* ✅ MODAL EDIT */}
-            <EditCollectionModal
-                isOpen={isEditModalOpen}
-                onClose={() => {
-                    setIsEditModalOpen(false);
-                    setSelectedCollection(null);
-                }}
-                onSubmit={handleEditCollection}
-                collection={selectedCollection}
-                isLoading={isLoading}
-            />
-
-            {/* ✅ MODAL DELETE */}
-            <DeleteCollectionModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => {
-                    setIsDeleteModalOpen(false);
-                    setSelectedCollection(null);
-                }}
-                onConfirm={handleDeleteCollection}
-                collection={selectedCollection}
-                isLoading={isLoading}
-            />
         </div>
     );
 }
