@@ -282,40 +282,52 @@ export const collectionsService = {
 
     // ✅ MANTIENI - Aggiorna ownership
     async updateCardOwnership(userId, collectionId, cardId, owned) {
-        try {
-            console.log('🔥 Updating ownership:', { userId, collectionId, cardId, owned }); // Debug
+        console.log('🔥 updateCardOwnership called with:', {
+            userId,
+            collectionId,
+            cardId,
+            owned
+        });
 
+        try {
             const ownershipId = `${userId}_${collectionId}_${cardId}`;
+            console.log('🔥 Creating ownership document with ID:', ownershipId);
+
             const ownershipRef = doc(db, 'ownership', ownershipId);
 
-            // ✅ USA setDoc con merge invece di updateDoc
-            await setDoc(ownershipRef, {
+            const ownershipData = {
                 userId,
                 collectionId,
                 cardId,
                 owned,
                 updatedAt: serverTimestamp()
-            }, { merge: true });
+            };
+            console.log('🔥 Writing ownership data:', ownershipData);
 
-            console.log('✅ Ownership updated successfully'); // Debug
+            await setDoc(ownershipRef, ownershipData, { merge: true });
+            console.log('✅ Ownership document written successfully');
 
             // Aggiorna contatore collezione
             const collectionRef = doc(db, 'collections', collectionId);
             if (owned) {
+                console.log('🔥 Incrementing ownedCards counter');
                 await updateDoc(collectionRef, {
                     ownedCards: increment(1),
                     updatedAt: serverTimestamp()
                 });
             } else {
+                console.log('🔥 Decrementing ownedCards counter');
                 await updateDoc(collectionRef, {
                     ownedCards: increment(-1),
                     updatedAt: serverTimestamp()
                 });
             }
+            console.log('✅ Collection counter updated successfully');
 
         } catch (error) {
-            console.error('❌ Error updating card ownership:', error);
-            throw error; // Re-throw per gestione nell'UI
+            console.error('❌ Error in updateCardOwnership:', error);
+            console.error('❌ Error details:', error.message);
+            throw error;
         }
     },
 

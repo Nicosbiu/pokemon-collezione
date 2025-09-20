@@ -77,7 +77,8 @@ function PokemonCard({ card, isOwned, onToggleOwn }) {
 
                 {!isOwned && (
                     <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center 
-                                   opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                   opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                   pointer-events-none"> {/* ✅ pointer-events-none permette click attraverso */}
                         <div className="text-white/90 text-sm font-medium bg-black/60 px-3 py-1 rounded-full">
                             Non Posseduta
                         </div>
@@ -157,27 +158,34 @@ function CollectionViewPage() {
     };
 
     const handleToggleCardOwnership = async (cardId) => {
+        console.log('🔄 handleToggleCardOwnership called with:', cardId);
+        console.log('🔄 Current ownedCards:', Array.from(ownedCards));
+
         try {
             const wasOwned = ownedCards.has(cardId);
-            console.log('🔄 Toggle attempt:', { cardId, wasOwned, newState: !wasOwned }); // Debug
+            console.log('🔄 Card was owned:', wasOwned, '-> will be:', !wasOwned);
 
             // Optimistic update
             const newOwnedCards = new Set(ownedCards);
             if (wasOwned) {
                 newOwnedCards.delete(cardId);
+                console.log('🔄 Removing from optimistic UI');
             } else {
                 newOwnedCards.add(cardId);
+                console.log('🔄 Adding to optimistic UI');
             }
             setOwnedCards(newOwnedCards);
+            console.log('🔄 New optimistic ownedCards:', Array.from(newOwnedCards));
 
-            // ✅ CHIAMATA DATABASE - Con retry logic
             try {
+                console.log('🔄 Calling Firebase updateCardOwnership...');
                 await collectionsService.updateCardOwnership(
                     currentUser.uid,
                     id,
                     cardId,
                     !wasOwned
                 );
+                console.log('✅ Firebase updateCardOwnership completed successfully');
 
                 const card = cards.find(c => c.id === cardId);
                 toast.success(
@@ -194,9 +202,8 @@ function CollectionViewPage() {
             }
 
         } catch (error) {
-            console.error('❌ Error toggling card ownership:', error);
+            console.error('❌ Error in handleToggleCardOwnership:', error);
             toast.error('Errore nell\'aggiornamento della carta');
-            // Force reload in case of persistent issues
             setTimeout(() => {
                 loadCollectionData();
             }, 1000);
