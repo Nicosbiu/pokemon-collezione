@@ -1,4 +1,4 @@
-// src/App.jsx - Aggiungi la nuova route
+// src/App.jsx
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import RequireAuth from './components/RequireAuth';
@@ -7,7 +7,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CollectionsPage from './pages/CollectionsPage';
-import CollectionViewPage from './pages/CollectionViewPage'; // ✅ NUOVO IMPORT
+import CollectionViewPage from './pages/CollectionViewPage';
+import CardDetailPage from './pages/CardDetailPage'; // ✅ NUOVO IMPORT
 
 function App() {
   return (
@@ -23,10 +24,15 @@ function App() {
               <CollectionsPage />
             </RequireAuth>
           } />
-          {/* ✅ NUOVA ROUTE PER BINDER */}
           <Route path="/collection/:id" element={
             <RequireAuth>
               <CollectionViewPage />
+            </RequireAuth>
+          } />
+          {/* ✅ NUOVA ROUTE PER DETTAGLIO CARTA */}
+          <Route path="/collection/:collectionId/card/:cardId" element={
+            <RequireAuth>
+              <CardDetailPage />
             </RequireAuth>
           } />
         </Routes>

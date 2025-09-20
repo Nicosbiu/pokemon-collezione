@@ -3,23 +3,26 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { collectionsService } from '../services/firebase';
-import { PokemonAPI } from '../services/pokemonAPI'; // ✅ AGGIUNGI per immagini API
+import { PokemonAPI } from '../services/pokemonAPI';
 import { ArrowLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { HeartIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 
 // ✅ POKEMON CARD COMPONENT - Con immagini dall'API
-function PokemonCard({ card, isOwned, onToggleOwn }) {
+function PokemonCard({ card, isOwned, onToggleOwn, collectionId }) {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
+    const navigate = useNavigate();
 
     const imageUrl = card.images?.small || card.images?.large || null;
 
     return (
         <div className="group relative backdrop-blur-xl bg-white/[0.08] border border-white/[0.12] 
                        rounded-xl p-3 hover:bg-white/10 hover:border-white/20 
-                       transition-all duration-300 cursor-pointer">
+                       transition-all duration-300 cursor-pointer"
+            onClick={() => navigate(`/collection/${collectionId}/card/${card.id}`)}
+        >
 
             <div className="relative mb-3 aspect-[2.5/3.5]">
 
@@ -271,7 +274,7 @@ function CollectionViewPage() {
                             <h1 className="text-2xl font-bold text-white">
                                 {collection?.name}
                             </h1>
-                            <p className="text-white/60 text-sm">
+                            <p className="text-white/60 text-sm mt-2">
                                 {collection?.setName || 'Collezione Personalizzata'}
                             </p>
                         </div>
@@ -334,6 +337,7 @@ function CollectionViewPage() {
                             card={card}
                             isOwned={ownedCards.has(card.id)}
                             onToggleOwn={handleToggleCardOwnership}
+                            collectionId={id}
                         />
                     ))}
                 </div>
