@@ -22,8 +22,18 @@ function CollectionCard({ collection, onEdit, onDelete, onView }) {
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => onView(collection)}
         >
+            {/* Badge lingua effettiva */}
+            {collection.isFallback && (
+                <div className="pt-4 pl-4 pr-6">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs 
+                       bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                        🌍 Inglese
+                    </span>
+                </div>
+            )}
+
             {/* ✅ BADGE SET - Padding ridotto per allineamento */}
-            <div className="pt-4 pl-4 pr-6">
+            <div className="pt-2 pl-4 pr-6">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium border
                                ${collection.type === 'base'
                         ? 'bg-blue-500/20 text-blue-300 border-blue-400/30'

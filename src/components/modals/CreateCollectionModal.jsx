@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { XMarkIcon, ChevronLeftIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { collectionsService } from '../../services/firebase';
-import { pokemonAPI } from '../../services/pokemonAPI';
+import { PokemonAPI } from '../../services/pokemonAPI';
 import toast from 'react-hot-toast';
 
 function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false }) {
@@ -27,7 +27,7 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     };
 
     const [formData, setFormData] = useState(initialFormState);
-    const supportedLanguages = pokemonAPI.getSupportedLanguages();
+    const supportedLanguages = PokemonAPI.getSupportedLanguages();
 
     // Reset form quando il modal si chiude - Usa il tuo pattern
     useEffect(() => {
@@ -49,7 +49,7 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
     const loadAvailableSets = async () => {
         setLoadingSets(true);
         try {
-            const setsResponse = await pokemonAPI.getSetsByLanguage(formData.language);
+            const setsResponse = await PokemonAPI.getSetsByLanguage(formData.language);
 
             if (setsResponse.data) {
                 // Ordina i set per data di rilascio (più recenti prima)
@@ -116,7 +116,7 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
             // 1. Ottieni dettagli completi del set
             let setData = await collectionsService.getSetFromCache(formData.selectedSet.id);
             if (!setData) {
-                const setResponse = await pokemonAPI.getSetsByLanguage(formData.language);
+                const setResponse = await PokemonAPI.getSetsByLanguage(formData.language);
                 setData = setResponse.data.find(s => s.id === formData.selectedSet.id);
 
                 if (!setData) {
@@ -124,37 +124,50 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                 }
             }
 
-            // 2. ✅ IMPORTANTE: Ottieni tutte le carte del set con immagini
+            // ✅ CARICA CARTE CON FALLBACK
             console.log('🔍 Loading cards for set:', formData.selectedSet.id);
-            const cardsResponse = await pokemonAPI.getCardsBySet(
+            const cardsResponse = await PokemonAPI.getCardsBySet(
                 formData.selectedSet.id,
                 formData.language,
                 1,
                 500
             );
 
-            if (!cardsResponse.data || cardsResponse.data.length === 0) {
-                throw new Error('Carte del set non trovate');
+            // ✅ MANTIENI SOLO QUESTO:
+            if (cardsResponse.isFallback) {
+                const languageNames = {
+                    'it': 'italiano',
+                    'en': 'inglese',
+                    'fr': 'francese',
+                    'es': 'spagnolo',
+                    'de': 'tedesco',
+                    'ja': 'giapponese'
+                };
+
+                const originalLang = languageNames[cardsResponse.requestedLanguage] || cardsResponse.requestedLanguage;
+                const fallbackLang = languageNames[cardsResponse.language] || cardsResponse.language;
+
+                toast.success(
+                    `📢 Il set "${formData.selectedSet.name}" non era disponibile in ${originalLang}.\n` +
+                    `Caricato in ${fallbackLang} con ${cardsResponse.data.length} carte! 🌍`,
+                    {
+                        duration: 6000,
+                        style: {
+                            maxWidth: '500px',
+                        }
+                    }
+                );
             }
 
-            console.log(`✅ Loaded ${cardsResponse.data.length} cards with images`);
-
-            // 3. ✅ Assicurati che le carte abbiano le immagini
-            const cardsWithImages = cardsResponse.data.map(card => ({
-                ...card,
-                images: card.images || {
-                    small: card.image,
-                    large: card.image
-                }
-            }));
-
-            // 4. Prepara dati collezione
+            // ✅ PREPARA DATI COLLEZIONE CON LINGUA EFFETTIVA
             const collectionData = {
                 name: formData.name,
                 description: formData.description,
                 gameId: formData.gameId,
-                language: formData.language,
+                language: cardsResponse.language, // ✅ USA LINGUA EFFETTIVA
+                requestedLanguage: formData.language, // ✅ SALVA LINGUA RICHIESTA
                 ownerId: currentUser.uid,
+                isFallback: cardsResponse.isFallback, // ✅ FLAG FALLBACK
                 members: {
                     [currentUser.uid]: {
                         role: 'owner',
@@ -164,11 +177,11 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
                 }
             };
 
-            // 5. ✅ Usa le carte con immagini
+            // ✅ CREA COLLEZIONE
             const result = await collectionsService.createBaseCollection(
                 collectionData,
                 setData,
-                cardsWithImages, // ✅ Passa le carte con immagini
+                cardsResponse.data,
                 formData.isComplete
             );
 
@@ -185,7 +198,6 @@ function CreateCollectionModal({ isOpen, onClose, onSubmit, isLoading = false })
             toast.error(`Errore: ${error.message}`);
         }
     };
-
 
     // ✅ CHIUDI MODALE - Reset completo
     const handleClose = () => {

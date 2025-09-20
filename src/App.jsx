@@ -1,6 +1,7 @@
 // src/App.jsx
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { Toaster } from 'react-hot-toast';
 import RequireAuth from './components/RequireAuth';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
@@ -8,7 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CollectionsPage from './pages/CollectionsPage';
 import CollectionViewPage from './pages/CollectionViewPage';
-import CardDetailPage from './pages/CardDetailPage'; // ✅ NUOVO IMPORT
+import CardDetailPage from './pages/CardDetailPage';
 
 function App() {
   return (
@@ -36,6 +37,16 @@ function App() {
             </RequireAuth>
           } />
         </Routes>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+          }}
+        />
       </div>
     </AuthProvider>
   );
