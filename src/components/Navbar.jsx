@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
 import {
     HomeIcon,
-    FolderIcon,          // ✅ Cambiato da RectangleStackIcon
+    FolderIcon,
     PlusIcon,
     ChartBarIcon,
     UserIcon,
@@ -28,7 +28,7 @@ export default function Navbar() {
     // ✅ NAVIGAZIONE CONDIZIONALE
     const navItems = currentUser ? [
         { path: '/', label: 'Home', icon: <HomeIcon className="w-5 h-5" /> },
-        { path: '/collections', label: 'Collections', icon: <FolderIcon className="w-5 h-5" /> },
+        { path: '/collections', label: 'Collezioni', icon: <FolderIcon className="w-5 h-5" /> },
         { path: '/add-card', label: 'Aggiungi', icon: <PlusIcon className="w-5 h-5" /> },
         { path: '/stats', label: 'Stats', icon: <ChartBarIcon className="w-5 h-5" /> },
     ] : []; // ✅ Array vuoto se non loggato
@@ -47,9 +47,9 @@ export default function Navbar() {
                         {/* Logo/Brand */}
                         <Link to="/" className="flex items-center space-x-3 group">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-white/10 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                                <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">P</span>
+                                <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">VB</span>
                             </div>
-                            <span className="text-lg font-semibold text-white/90 hidden sm:block">PokéCollection</span>
+                            <span className="text-lg font-semibold text-white/90 hidden sm:block">VirtualBinder</span>
                         </Link>
 
                         {/* Navigation Links - Desktop */}
@@ -88,7 +88,7 @@ export default function Navbar() {
                                         onClick={handleLogout}
                                         className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/20 hover:border-red-500/30 text-red-300 hover:text-red-200 transition-all duration-300 text-sm font-medium"
                                     >
-                                        Logout
+                                        Esci
                                     </button>
                                 </div>
                             ) : (
@@ -97,7 +97,7 @@ export default function Navbar() {
                                         to="/login"
                                         className="px-4 py-2.5 rounded-xl text-white/80 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all duration-300 text-sm font-medium"
                                     >
-                                        Login
+                                        Accedi
                                     </Link>
                                     <Link
                                         to="/register"

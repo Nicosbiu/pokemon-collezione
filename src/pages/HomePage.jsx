@@ -15,7 +15,7 @@ function HomePage() {
                         rounded-2xl p-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 
                           border-white mx-auto"></div>
-                    <p className="text-white/70 mt-4 text-center">Loading...</p>
+                    <p className="text-white/70 mt-4 text-center">Caricamento...</p>
                 </div>
             </div>
         );

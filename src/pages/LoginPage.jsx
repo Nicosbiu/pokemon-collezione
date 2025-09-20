@@ -18,7 +18,7 @@ function LoginPage() {
         e.preventDefault();
 
         if (!formData.email || !formData.password) {
-            toast.error('Please fill in all fields');
+            toast.error('Per favore, compila tutti i campi.');
             return;
         }
 
@@ -29,34 +29,34 @@ function LoginPage() {
             await login(formData.email, formData.password);
 
             console.log('✅ LoginPage: Login successful, redirecting...');
-            toast.success('Login successful! Welcome back!');
+            toast.success('Accesso eseguito! Bentornato!');
             navigate('/'); // Redirect to home
 
         } catch (error) {
             console.error('❌ LoginPage: Login failed:', error);
 
             // ✅ Gestione errori Firebase specifici
-            let errorMessage = 'Login failed. Please try again.';
+            let errorMessage = 'Accesso fallito. Per favore, riprova.';
 
             switch (error.code) {
                 case 'auth/user-not-found':
-                    errorMessage = 'No account found with this email.';
+                    errorMessage = 'Nessun account trovato con questa email.';
                     break;
                 case 'auth/wrong-password':
                 case 'auth/invalid-credential':
-                    errorMessage = 'Invalid email or password.';
+                    errorMessage = 'Email o password non validi.';
                     break;
                 case 'auth/invalid-email':
-                    errorMessage = 'Please enter a valid email address.';
+                    errorMessage = 'Inserisci un indirizzo email valido.';
                     break;
                 case 'auth/too-many-requests':
-                    errorMessage = 'Too many failed attempts. Please try again later.';
+                    errorMessage = 'Troppi tentativi falliti. Riprova più tardi.';
                     break;
                 case 'auth/network-request-failed':
-                    errorMessage = 'Network error. Please check your connection.';
+                    errorMessage = 'Errore di rete. Controlla la tua connessione.';
                     break;
                 default:
-                    errorMessage = error.message || 'Login failed. Please try again.';
+                    errorMessage = error.message || 'Accesso fallito. Riprova.';
             }
 
             toast.error(errorMessage);
@@ -73,8 +73,8 @@ function LoginPage() {
 
                     {/* Header */}
                     <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-                        <p className="text-white/70">Sign in to your account</p>
+                        <h1 className="text-3xl font-bold text-white mb-2">Bentornato!</h1>
+                        <p className="text-white/70">Accedi al tuo account</p>
                     </div>
 
                     {/* Form */}
@@ -90,7 +90,7 @@ function LoginPage() {
                            rounded-lg px-4 py-3 text-white placeholder-white/50 
                            focus:outline-none focus:border-white/30 transition-all
                            disabled:opacity-50 disabled:cursor-not-allowed"
-                                placeholder="your@email.com"
+                                placeholder="tua@email.com"
                                 required
                             />
                         </div>
@@ -106,7 +106,7 @@ function LoginPage() {
                            rounded-lg px-4 py-3 text-white placeholder-white/50 
                            focus:outline-none focus:border-white/30 transition-all
                            disabled:opacity-50 disabled:cursor-not-allowed"
-                                placeholder="Your password"
+                                placeholder="Password"
                                 required
                             />
                         </div>
@@ -124,10 +124,10 @@ function LoginPage() {
                             {isLoading ? (
                                 <>
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                    Signing In...
+                                    Entrando...
                                 </>
                             ) : (
-                                'Sign In'
+                                'Accedi'
                             )}
                         </button>
                     </form>
@@ -135,9 +135,9 @@ function LoginPage() {
                     {/* Footer */}
                     <div className="text-center mt-6 pt-6 border-t border-white/10">
                         <p className="text-white/70">
-                            Don't have an account?{' '}
+                            Non hai un account?{' '}
                             <Link to="/register" className="text-purple-300 hover:text-purple-200 font-medium">
-                                Sign up here
+                                Registrati qui
                             </Link>
                         </p>
                     </div>

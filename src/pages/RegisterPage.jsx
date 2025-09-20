@@ -218,7 +218,7 @@ function RegisterPage() {
             // Se l'account è stato creato ma c'è stato un errore successivo
             if (userCreated && currentUser) {
                 console.log('⚠️ RegisterPage: Account creato ma errore successivo');
-                toast.success('Account creato con successo! Puoi ora accedere.');
+                toast.success('Account creato con successo! Ora puoi accedere.');
 
                 // Reindirizza al login dopo delay
                 setTimeout(() => {
@@ -252,7 +252,7 @@ function RegisterPage() {
                     {/* Header */}
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-white mb-2">Crea Account</h1>
-                        <p className="text-white/70">Unisciti alla community Pokémon Collection</p>
+                        <p className="text-white/70">Unisciti alla community di VirtualBinder</p>
                     </div>
 
                     {/* Form */}
@@ -327,7 +327,7 @@ function RegisterPage() {
                                             ? 'border-red-400/50 focus:border-red-400/70'
                                             : 'border-white/[0.12] focus:border-white/30'
                                         }`}
-                                    placeholder="username_univoco"
+                                    placeholder="Username"
                                     required
                                 />
                                 {errors.username && (

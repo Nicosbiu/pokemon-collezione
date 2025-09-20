@@ -212,10 +212,10 @@ function CollectionsPage() {
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                         <div>
                             <h1 className="text-white text-3xl font-bold mb-2">
-                                Le Tue Collezioni ⚡
+                                Le Tue Collezioni
                             </h1>
                             <p className="text-white/70">
-                                Bentornato, {currentUser?.email}! Hai {collections.length} collezione/i.
+                                Bentornato, {currentUser?.displayName}! Hai {collections.length} {(collections.length == 1) ? "collezione" : "collezioni"}.
                             </p>
                         </div>
                         <button
